@@ -17,6 +17,11 @@ export class ExerciseThumbComponent {
   private readonly catalog = inject(ExerciseService);
   exerciseId = input.required<string>();
   index = input(0);
+
+  constructor() {
+    this.catalog.ensureIndex();
+  }
+
   url = computed(() => this.catalog.imageUrl(this.catalog.byId(this.exerciseId()), this.index()) ?? PLACEHOLDER);
 
   fallback(ev: Event) {

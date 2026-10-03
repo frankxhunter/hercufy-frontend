@@ -73,9 +73,16 @@ export class PlanDetailPage {
     this.nav.navigateForward(`/rutinas/${planId}/dia/${dayId}`);
   }
 
-  setActive(active: boolean) {
+  async setActive(active: boolean) {
     const p = this.plan();
-    if (p && p.active !== active) this.plans.setActive(p.id, active);
+    if (!p || p.active === active) return;
+    try {
+      await this.plans.setActive(p.id, active);
+    } catch (e) {
+      await showToast(this.toastCtrl, (e as Error).message);
+      // El interruptor ya se ve cambiado: se vuelve a pedir la rutina para mostrar lo real.
+      await this.plans.load(true);
+    }
   }
 
   async rename() {
@@ -89,7 +96,12 @@ export class PlanDetailPage {
     await a.present();
     const { data, role } = await a.onDidDismiss();
     const name = data?.values?.name?.trim();
-    if (role === 'confirm' && name) await this.plans.rename(p.id, name);
+    if (role !== 'confirm' || !name) return;
+    try {
+      await this.plans.rename(p.id, name);
+    } catch (e) {
+      await showToast(this.toastCtrl, (e as Error).message);
+    }
   }
 
   async addDay(p: TrainingPlan, dow: number) {
@@ -103,9 +115,12 @@ export class PlanDetailPage {
     await a.present();
     const { data, role } = await a.onDidDismiss();
     const name = data?.values?.name?.trim();
-    if (role === 'confirm' && name) {
+    if (role !== 'confirm' || !name) return;
+    try {
       const dayId = await this.plans.addDay(p.id, name, dow);
       this.openDay(p.id, dayId);
+    } catch (e) {
+      await showToast(this.toastCtrl, (e as Error).message);
     }
   }
 
@@ -117,10 +132,14 @@ export class PlanDetailPage {
     });
     await a.present();
     const { role } = await a.onDidDismiss();
-    if (role === 'confirm') {
+    if (role !== 'confirm') return;
+    try {
       await this.plans.remove(p.id);
-      await showToast(this.toastCtrl, 'Rutina eliminada');
-      await this.nav.navigateRoot('/tabs/rutinas');
+    } catch (e) {
+      await showToast(this.toastCtrl, (e as Error).message);
+      return;
     }
+    await showToast(this.toastCtrl, 'Rutina eliminada');
+    await this.nav.navigateRoot('/tabs/rutinas');
   }
 }

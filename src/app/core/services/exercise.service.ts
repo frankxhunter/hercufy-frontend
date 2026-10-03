@@ -1,71 +1,126 @@
-import { Injectable } from '@angular/core';
-import { EXERCISE_CATALOG } from '../data/exercise-catalog';
+import { Injectable, inject, signal } from '@angular/core';
 import { Exercise } from '../models';
-import { EXERCISE_IMAGES_BASE } from '../config';
-import { MUSCLE_GROUPS, groupOfMuscle, normalize } from '../labels';
+import { ExerciseRepository } from './exercise.repository';
+import { MUSCLE_GROUPS, MuscleGroup, groupOfMuscle, normalize } from '../labels';
+
+/** Tamaño de página del buscador. El backend pagina de 20 en 20 por defecto. */
+export const SEARCH_PAGE_SIZE = 40;
+
+/** Proporción de palabras del texto que hay que encontrar para dar el ejercicio por bueno. */
+const MATCH_THRESHOLD = 0.6;
 
 /**
- * Catálogo de ejercicios. Hoy lee datos de demostración; al conectar el backend
- * solo cambia el origen de datos, no la API que usan las pantallas.
+ * Catálogo de ejercicios del backend. La búsqueda se hace en el servidor (que lo tiene
+ * entero en memoria) y los resúmenes que llegan se guardan en un signal: con ese mapa los
+ * listados, las miniaturas y las franjas de color se resuelven sin más peticiones, aunque
+ * la pantalla se abra en frío.
  */
 @Injectable({ providedIn: 'root' })
 export class ExerciseService {
-  private readonly all = EXERCISE_CATALOG;
-  private readonly byIdMap = new Map(this.all.map((e) => [e.id, e]));
-  private readonly haystack = new Map(
-    this.all.map((e) => [e.id, normalize(`${e.nameEs} ${e.name} ${e.equipment ?? ''}`)]),
-  );
+  private readonly repo = inject(ExerciseRepository);
 
-  list(): Exercise[] {
-    return this.all;
+  private readonly cache = signal<ReadonlyMap<string, Exercise>>(new Map());
+  readonly indexLoaded = signal(false);
+  private pending: Promise<void> | null = null;
+
+  /** Carga el resumen de todo el catálogo una sola vez, en segundo plano. */
+  ensureIndex(): void {
+    if (this.indexLoaded() || this.pending) return;
+    this.pending = this.repo
+      .index()
+      .then((all) => {
+        this.merge(all);
+        this.indexLoaded.set(true);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        this.pending = null;
+      });
+  }
+
+  /** Espera a que el índice esté disponible (usado por Hercules, que necesita nombres). */
+  indexReady(): Promise<void> {
+    this.ensureIndex();
+    return this.pending ?? Promise.resolve();
   }
 
   byId(id: string): Exercise | undefined {
-    return this.byIdMap.get(id);
+    return this.cache().get(id);
+  }
+
+  async detail(id: string): Promise<Exercise> {
+    const full = await this.repo.detail(id);
+    this.merge([full]);
+    return full;
   }
 
   imageUrl(e: Exercise | undefined, index = 0): string | null {
-    const img = e?.images[index];
-    return img ? EXERCISE_IMAGES_BASE + img : null;
+    return e?.imageUrls[index] ?? null;
   }
 
-  groupOf(e: Exercise | undefined) {
-    return groupOfMuscle(e?.primaryMuscles[0]);
+  groupOf(e: Exercise | undefined): MuscleGroup | undefined {
+    if (!e) return undefined;
+    if (e.muscleGroup) return MUSCLE_GROUPS.find((g) => g.key === e.muscleGroup);
+    return groupOfMuscle(e.primaryMuscles[0]);
   }
 
-  search(query: string, groupKey: string | null = null): Exercise[] {
-    const tokens = this.tokens(query);
-    const group = MUSCLE_GROUPS.find((g) => g.key === groupKey);
-    return this.all
-      .filter((e) => !group || group.muscles.includes(e.primaryMuscles[0]))
-      .filter((e) => tokens.every((t) => this.haystack.get(e.id)!.includes(t)))
-      .sort((a, b) => a.nameEs.localeCompare(b.nameEs, 'es'));
+  /** Búsqueda en el catálogo del servidor: `q` busca por nombre y material, `muscleGroup` filtra. */
+  async search(query: string, groupKey: string | null, size = SEARCH_PAGE_SIZE) {
+    const result = await this.repo.search(query, groupKey, size);
+    this.merge(result.items);
+    return result;
   }
 
   /**
-   * Mejor coincidencia para un texto libre. Gana la mayor proporción de palabras;
-   * en empate, el ejercicio más básico (el catálogo está ordenado por popularidad).
+   * Mejor coincidencia para un texto libre. Primero pregunta al servidor y, si no hay
+   * candidatos o la búsqueda falla, recorre el índice local. Gana la mayor proporción de
+   * palabras del texto presentes en el nombre o el material del ejercicio.
    */
-  findBestMatch(text: string): Exercise | null {
-    let best: { e: Exercise; ratio: number } | null = null;
-    for (const e of this.all) {
-      const ratio = this.score(e, text);
-      if (ratio >= 0.6 && (!best || ratio > best.ratio)) best = { e, ratio };
+  async findBestMatch(text: string): Promise<Exercise | null> {
+    const q = text.trim();
+    if (!q) return null;
+
+    let candidates: Exercise[] = [];
+    try {
+      candidates = (await this.repo.search(q, null, 15)).items;
+    } catch {
+      // Sin servidor no hay catálogo: el índice local es el único camino.
     }
-    return best?.e ?? null;
+    let best = this.best(candidates, q);
+    if (best) return best;
+
+    await this.indexReady();
+    return this.best([...this.cache().values()], q);
   }
 
   /** Proporción de palabras del texto que aparecen en el ejercicio (0 a 1). */
   score(e: Exercise, text: string): number {
     const tokens = this.tokens(text);
     if (!tokens.length) return 0;
-    const hay = this.haystack.get(e.id)!;
-    return tokens.filter((t) => hay.includes(t)).length / tokens.length;
+    const haystack = normalize(`${e.nameEs} ${e.name} ${e.equipment ?? ''}`);
+    return tokens.filter((t) => haystack.includes(t)).length / tokens.length;
   }
 
-  private tokens(q: string): string[] {
+  private best(candidates: Exercise[], text: string): Exercise | null {
+    let winner: { e: Exercise; ratio: number } | null = null;
+    for (const e of candidates) {
+      const ratio = this.score(e, text);
+      if (ratio >= MATCH_THRESHOLD && (!winner || ratio > winner.ratio)) winner = { e, ratio };
+    }
+    return winner?.e ?? null;
+  }
+
+  /** Inserta en la caché; un detalle siempre pisa al resumen anterior del mismo ejercicio. */
+  private merge(exercises: Exercise[]): void {
+    if (!exercises.length) return;
+    const next = new Map(this.cache());
+    for (const e of exercises) next.set(e.id, e);
+    this.cache.set(next);
+  }
+
+  private tokens(query: string): string[] {
     const stop = new Set(['de', 'con', 'en', 'el', 'la', 'los', 'las', 'a', 'y', 'un', 'una']);
-    return normalize(q)
+    return normalize(query)
       .split(' ')
       .filter((t) => t && !stop.has(t))
       .map((t) => (t.length > 4 ? t.replace(/s$/, '') : t));

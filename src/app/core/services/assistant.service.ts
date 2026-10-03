@@ -9,21 +9,23 @@ export interface AssistantResult {
 }
 
 /**
- * Contrato del asistente Hercules. Hoy responde MockAssistant (reglas locales);
- * al conectar el backend se sustituye por un servicio HTTP con el mismo contrato.
+ * Contrato del asistente Hercules. Actualmente seguimos resolviendo los borradores
+ * localmente mientras el backend recibe el endpoint del asistente; la resolución de
+ * ejercicios contra el catálogo ya va por el backend, no por el mock estático.
  */
 export abstract class AssistantPort {
   abstract createDraft(prompt: string): Promise<AssistantResult>;
   abstract refine(draft: PlanDraft, message: string): Promise<AssistantResult>;
 }
 
+/** Pausa breve para que el indicador de "pensando" se vea al escribir. */
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 type Row = [string, number, number, number | null];
 const TEMPLATES: Record<string, { name: string; rows: Row[] }> = {
   pecho: { name: 'Pecho y tríceps', rows: [
     ['Barbell_Bench_Press_-_Medium_Grip', 4, 8, 50], ['Incline_Dumbbell_Press', 3, 10, 18],
-    ['Cable_Crossover', 3, 12, 15], ['Triceps_Pushdown', 3, 12, 25], ['Lying_Triceps_Press', 3, 10, 20]] },
+    ['Cable_Crossover', 3, 12, 15], ['Triceps_Pushdown_-_Rope_Attachment', 3, 12, 25], ['Lying_Triceps_Press', 3, 10, 20]] },
   espalda: { name: 'Espalda y bíceps', rows: [
     ['Pullups', 4, 8, null], ['Bent_Over_Barbell_Row', 4, 8, 50], ['Seated_Cable_Rows', 3, 10, 45],
     ['Barbell_Curl', 3, 10, 25], ['Hammer_Curls', 3, 12, 12]] },
@@ -60,16 +62,18 @@ const NUM_WORDS: Record<string, number> = { dos: 2, tres: 3, cuatro: 4, cinco: 5
 const DAY_WORDS = 'lunes|martes|miercoles|jueves|viernes|sabado|domingo';
 
 @Injectable()
-export class MockAssistant extends AssistantPort {
+export class LocalAssistant extends AssistantPort {
   private readonly catalog = inject(ExerciseService);
 
   async createDraft(prompt: string): Promise<AssistantResult> {
-    await wait(1100);
-    return this.fromPasted(prompt) ?? this.fromDescription(prompt);
+    await wait(400);
+    await this.catalog.indexReady();
+    return (await this.fromPasted(prompt)) ?? this.fromDescription(prompt);
   }
 
   async refine(draft: PlanDraft, message: string): Promise<AssistantResult> {
-    await wait(700);
+    await wait(350);
+    await this.catalog.indexReady();
     const d = structuredClone(draft);
     const n = normalize(message);
 
@@ -77,32 +81,37 @@ export class MockAssistant extends AssistantPort {
     if (swap) {
       const target = this.findInDraft(d, swap[1]);
       if (!target) return { draft: d, reply: `No veo «${swap[1]}» en la rutina. Dime el nombre tal como aparece en la lista.` };
-      const next = this.catalog.findBestMatch(swap[2]);
+      const next = await this.catalog.findBestMatch(swap[2]);
       if (!next) return { draft: d, reply: `No encuentro «${swap[2]}» en el catálogo. Prueba con otro nombre, por ejemplo «press inclinado con mancuernas».` };
-      const before = this.catalog.byId(target.exerciseId)!;
+      const before = this.catalog.byId(target.exerciseId);
       target.exerciseId = next.id;
+      target.exerciseName = next.name;
+      target.exerciseNameEs = next.nameEs;
       if (next.equipment === 'body only') target.weightKg = null;
-      return { draft: d, reply: `Hecho: cambié ${before.nameEs.toLowerCase()} por ${next.nameEs.toLowerCase()}. Mantengo las series y repeticiones; ajusta el peso cuando lo pruebes.` };
+      const nameBefore = (before?.nameEs ?? before?.name ?? target.exerciseNameEs ?? '').toLowerCase();
+      const nameNext = (next.nameEs ?? next.name).toLowerCase();
+      return { draft: d, reply: `Hecho: cambié ${nameBefore} por ${nameNext}. Mantengo las series y repeticiones; ajusta el peso cuando lo pruebes.` };
     }
 
     const remove = n.match(/^(?:quita|quitame|elimina|eliminame|borra|borrame|saca)\s+(?:el |la |los |las )?(.+)$/);
     if (remove) {
       const target = this.findInDraft(d, remove[1]);
       if (!target) return { draft: d, reply: `No veo «${remove[1]}» en la rutina.` };
-      const name = this.catalog.byId(target.exerciseId)!.nameEs.toLowerCase();
+      const ex = this.catalog.byId(target.exerciseId);
+      const name = (target.exerciseNameEs || ex?.nameEs || ex?.name || '').toLowerCase();
       d.days.forEach((day) => (day.exercises = day.exercises.filter((e) => e.id !== target.id)));
       return { draft: d, reply: `Quité ${name} de la rutina.` };
     }
 
     const add = n.match(new RegExp(`^(?:anade|anademe|agrega|agregame|incluye|mete|metele)\\s+(?:el |la |los |las )?(.+?)(?:\\s+(?:el|en el|al|los)\\s+(${DAY_WORDS}))?$`));
     if (add) {
-      const ex = this.catalog.findBestMatch(add[1]);
+      const ex = await this.catalog.findBestMatch(add[1]);
       if (!ex) return { draft: d, reply: `No encuentro «${add[1]}» en el catálogo. Prueba con otro nombre.` };
       const dow = add[2] ? WEEKDAYS.find((w) => normalize(w.name) === add[2])?.n : undefined;
       const day = d.days.find((x) => x.dayOfWeek === dow) ?? d.days[d.days.length - 1];
       if (!day) return { draft: d, reply: 'La rutina todavía no tiene días donde añadirlo.' };
-      day.exercises.push({ id: uid(), exerciseId: ex.id, sets: 3, reps: 10, weightKg: null });
-      return { draft: d, reply: `Añadí ${ex.nameEs.toLowerCase()} a «${day.name}» con 3 series de 10 repeticiones.` };
+      day.exercises.push({ id: uid(), exerciseId: ex.id, sets: 3, reps: 10, weightKg: null, exerciseName: ex.name, exerciseNameEs: ex.nameEs });
+      return { draft: d, reply: `Añadí ${(ex.nameEs ?? ex.name).toLowerCase()} a «${day.name}» con 3 series de 10 repeticiones.` };
     }
 
     return { draft: d, reply: 'Puedo cambiar, quitar o añadir ejercicios. Por ejemplo: «cámbiame el press banca por press inclinado con mancuernas», «quita las dominadas» o «añade plancha el viernes».' };
@@ -152,7 +161,7 @@ export class MockAssistant extends AssistantPort {
   }
 
   // Una rutina pegada como texto ("Press banca 4x8 60kg").
-  private fromPasted(prompt: string): AssistantResult | null {
+  private async fromPasted(prompt: string): Promise<AssistantResult | null> {
     const lines = prompt.split(/\n+/).map((l) => l.trim()).filter(Boolean);
     const setsRe = /^(.*?)[\s:,\-–]*?(\d+)\s*[x×]\s*(\d+)(.*)$/i;
     if (lines.filter((l) => setsRe.test(l)).length < 2) return null;
@@ -177,8 +186,8 @@ export class MockAssistant extends AssistantPort {
       const sets = +m[2], reps = +m[3];
       const w = m[4].match(/(\d+(?:[.,]\d+)?)\s*kg/i);
       const weightKg = w ? parseFloat(w[1].replace(',', '.')) : null;
-      const match = this.catalog.findBestMatch(m[1]);
-      if (match) current.exercises.push({ id: uid(), exerciseId: match.id, sets, reps, weightKg: match.equipment === 'body only' && !w ? null : weightKg });
+      const match = await this.catalog.findBestMatch(m[1]);
+      if (match) current.exercises.push({ id: uid(), exerciseId: match.id, sets, reps, weightKg: match.equipment === 'body only' && !w ? null : weightKg, exerciseName: match.name, exerciseNameEs: match.nameEs });
       else unresolved.push({ id: uid(), originalText: m[1].trim() || line, dayId: current.id, sets, reps, weightKg });
     }
 

@@ -1,8 +1,9 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar, NavController } from '@ionic/angular';
+import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar, NavController, ToastController } from '@ionic/angular';
 import { PlanService } from '../core/services/plan.service';
 import { WEEKDAYS } from '../core/labels';
+import { showToast } from '../core/util';
 
 @Component({
   selector: 'app-plan-manual',
@@ -42,6 +43,7 @@ import { WEEKDAYS } from '../core/labels';
 export class PlanManualPage {
   private readonly plans = inject(PlanService);
   private readonly nav = inject(NavController);
+  private readonly toastCtrl = inject(ToastController);
 
   week = WEEKDAYS;
   name = signal('');
@@ -62,10 +64,16 @@ export class PlanManualPage {
 
   async create() {
     if (!this.canCreate()) return;
-    const plan = await this.plans.createPlan(
-      this.name(),
-      this.chosen().map((w) => ({ name: this.dayNames()[w.n], dayOfWeek: w.n })),
-    );
+    let plan;
+    try {
+      plan = await this.plans.createPlan(
+        this.name(),
+        this.chosen().map((w) => ({ name: this.dayNames()[w.n], dayOfWeek: w.n })),
+      );
+    } catch (e) {
+      await showToast(this.toastCtrl, (e as Error).message);
+      return;
+    }
     await this.nav.navigateRoot('/rutinas/' + plan.id);
   }
 }

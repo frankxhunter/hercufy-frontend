@@ -17,7 +17,7 @@ import { IonIcon } from '@ionic/angular';
         <button type="button" class="ex-main" (click)="open.emit()">
           <app-exercise-thumb [exerciseId]="pe().exerciseId" />
           <span class="ex-text">
-            <span class="ex-name">{{ ex()?.nameEs }}</span>
+            <span class="ex-name">{{ title() }}</span>
             <span class="ex-meta">{{ meta() }}</span>
             <span class="ex-group">{{ muscle() }}</span>
           </span>
@@ -46,9 +46,20 @@ export class ExerciseRowComponent {
   up = output<void>();
   down = output<void>();
 
+  constructor() {
+    this.catalog.ensureIndex();
+  }
+
   ex = computed(() => this.catalog.byId(this.pe().exerciseId));
   group = computed(() => this.catalog.groupOf(this.ex()));
-  muscle = computed(() => MUSCLE_ES[this.ex()?.primaryMuscles[0] ?? ''] ?? '');
+  // El backend ya devuelve el nombre junto al ejercicio; el catálogo solo hace falta para
+  // la miniatura y el grupo muscular.
+  title = computed(() => this.pe().exerciseNameEs || this.ex()?.nameEs || this.pe().exerciseId);
+  muscle = computed(() => {
+    const e = this.ex();
+    const m = e?.primaryMuscles[0];
+    return m ? (MUSCLE_ES[m] ?? m) : (e?.muscleGroup ?? '');
+  });
   meta = computed(() => {
     const { sets, reps } = this.pe();
     return `${sets} ${sets === 1 ? 'serie' : 'series'} de ${reps} ${reps === 1 ? 'repetición' : 'repeticiones'}`;

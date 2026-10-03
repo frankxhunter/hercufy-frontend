@@ -70,8 +70,12 @@ export class DayDetailPage {
     this.nav.navigateForward('/ejercicio/' + exerciseId);
   }
 
-  move(from: number, to: number) {
-    this.plans.moveExercise(this.planId(), this.dayId(), from, to);
+  async move(from: number, to: number) {
+    try {
+      await this.plans.moveExercise(this.planId(), this.dayId(), from, to);
+    } catch (e) {
+      await showToast(this.toastCtrl, (e as Error).message);
+    }
   }
 
   async add() {
@@ -79,8 +83,12 @@ export class DayDetailPage {
     await m.present();
     const { data, role } = await m.onWillDismiss<string>();
     if (role !== 'pick' || !data) return;
-    const pe = await this.plans.addExercise(this.planId(), this.dayId(), data);
-    await this.edit(pe, true);
+    try {
+      const pe = await this.plans.addExercise(this.planId(), this.dayId(), data);
+      await this.edit(pe, true);
+    } catch (e) {
+      await showToast(this.toastCtrl, (e as Error).message);
+    }
   }
 
   async edit(pe: PlanExercise, canRemove: boolean) {
@@ -91,12 +99,17 @@ export class DayDetailPage {
     });
     await m.present();
     const { data, role } = await m.onWillDismiss<EditResult>();
-    if (role === 'save' && data) {
-      await this.plans.updateExercise(this.planId(), this.dayId(), { ...pe, ...data });
-      await showToast(this.toastCtrl, 'Cambios guardados');
-    } else if (role === 'remove') {
-      await this.plans.removeExercise(this.planId(), this.dayId(), pe.id);
-      await showToast(this.toastCtrl, 'Ejercicio quitado');
+    if (role !== 'save' && role !== 'remove') return;
+    try {
+      if (role === 'save' && data) {
+        await this.plans.updateExercise(this.planId(), this.dayId(), { ...pe, ...data });
+        await showToast(this.toastCtrl, 'Cambios guardados');
+      } else if (role === 'remove') {
+        await this.plans.removeExercise(this.planId(), this.dayId(), pe.id);
+        await showToast(this.toastCtrl, 'Ejercicio quitado');
+      }
+    } catch (e) {
+      await showToast(this.toastCtrl, (e as Error).message);
     }
   }
 
@@ -111,7 +124,12 @@ export class DayDetailPage {
     await a.present();
     const { data, role } = await a.onDidDismiss();
     const name = data?.values?.name?.trim();
-    if (role === 'confirm' && name) await this.plans.renameDay(this.planId(), d.id, name);
+    if (role !== 'confirm' || !name) return;
+    try {
+      await this.plans.renameDay(this.planId(), d.id, name);
+    } catch (e) {
+      await showToast(this.toastCtrl, (e as Error).message);
+    }
   }
 
   async removeDay() {
@@ -124,10 +142,14 @@ export class DayDetailPage {
     });
     await a.present();
     const { role } = await a.onDidDismiss();
-    if (role === 'confirm') {
-      await this.nav.navigateBack('/rutinas/' + this.planId());
+    if (role !== 'confirm') return;
+    try {
       await this.plans.removeDay(this.planId(), d.id);
-      await showToast(this.toastCtrl, 'Día quitado');
+    } catch (e) {
+      await showToast(this.toastCtrl, (e as Error).message);
+      return;
     }
+    await showToast(this.toastCtrl, 'Día quitado');
+    await this.nav.navigateBack('/rutinas/' + this.planId());
   }
 }

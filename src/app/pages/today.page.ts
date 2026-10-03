@@ -33,7 +33,12 @@ import { EditExerciseModal, EditResult } from '../ui/edit-exercise.modal';
 
         @if (!plan()) {
           <div class="empty">
-            @if (plans.plans().length === 0) {
+            @if (plans.loading() && plans.plans().length === 0) {
+              <strong>Cargando tu rutina…</strong>Un momento.
+            } @else if (plans.error(); as err) {
+              <strong>No hemos podido cargar tu rutina</strong>{{ err }}
+              <div style="margin-top:18px"><button type="button" class="btn" (click)="plans.load(true)">Reintentar</button></div>
+            } @else if (plans.plans().length === 0) {
               <strong>Aún no tienes ninguna rutina</strong>
               Créala a mano o pídesela a Hercules, y aquí verás qué te toca cada día.
               <div style="margin-top:18px"><button type="button" class="btn btn-primary" (click)="go('/rutinas/nueva')">Crear rutina</button></div>
@@ -117,9 +122,12 @@ export class TodayPage {
     });
     await m.present();
     const { data, role } = await m.onWillDismiss<EditResult>();
-    if (role === 'save' && data) {
+    if (role !== 'save' || !data) return;
+    try {
       await this.plans.updateExercise(plan.id, dayId, { ...pe, ...data });
       await showToast(this.toastCtrl, 'Cambios guardados');
+    } catch (e) {
+      await showToast(this.toastCtrl, (e as Error).message);
     }
   }
 }

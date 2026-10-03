@@ -61,7 +61,7 @@ export class EditExerciseModal implements OnInit {
 
   ngOnInit() {
     const ex = this.catalog.byId(this.exerciseId);
-    this.name = ex?.nameEs ?? '';
+    this.name = ex?.nameEs || this.exerciseId;
     this.muscle = MUSCLE_ES[ex?.primaryMuscles[0] ?? ''] ?? '';
     this.hasWeight.set(this.weightKg !== null);
     this.weight.set(this.weightKg ?? 20);

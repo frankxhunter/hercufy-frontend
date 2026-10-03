@@ -164,7 +164,15 @@ export class HerculesPage {
       await showToast(this.toastCtrl, 'La rutina no tiene ejercicios todavía');
       return;
     }
-    const plan = await this.plans.addPlan({ name: d.name.trim() || 'Mi rutina', scheduleType: 'WEEKDAY', days });
+    let plan;
+    try {
+      // El backend crea la rutina y luego los ejercicios de uno en uno: si algo falla, se avisa
+      // y el borrador sigue en pantalla para reintentarlo.
+      plan = await this.plans.addPlan({ name: d.name.trim() || 'Mi rutina', scheduleType: 'WEEKDAY', days });
+    } catch (e) {
+      await showToast(this.toastCtrl, (e as Error).message);
+      return;
+    }
     await showToast(this.toastCtrl, 'Rutina creada');
     await this.nav.navigateRoot('/rutinas/' + plan.id);
   }

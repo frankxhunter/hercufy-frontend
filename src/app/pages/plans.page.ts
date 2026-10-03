@@ -24,7 +24,15 @@ import { PlanService } from '../core/services/plan.service';
               <ion-icon class="chev" name="chevron-forward" />
             </button>
           } @empty {
-            <p class="empty"><strong>Todavía no hay rutinas</strong>Crea la primera para empezar a llevar tu entrenamiento.</p>
+            @if (plans.loading()) {
+              <p class="empty"><strong>Cargando tus rutinas…</strong>Un momento.</p>
+            } @else if (plans.error(); as err) {
+              <div class="empty"><strong>No hemos podido cargar tus rutinas</strong>{{ err }}
+                <div style="margin-top:18px"><button type="button" class="btn" (click)="plans.load(true)">Reintentar</button></div>
+              </div>
+            } @else {
+              <p class="empty"><strong>Todavía no hay rutinas</strong>Crea la primera para empezar a llevar tu entrenamiento.</p>
+            }
           }
         </div>
         <button type="button" class="btn btn-primary btn-block" style="margin-top:24px" (click)="go('/rutinas/nueva')">

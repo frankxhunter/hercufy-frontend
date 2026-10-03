@@ -1,7 +1,10 @@
 export interface Exercise {
   id: string;
   name: string;
+  /** Nombre en español si el backend tiene traducción; si no, el mismo que `name`. */
   nameEs: string;
+  /** true cuando el nombre en español es una traducción real y no el original en inglés. */
+  translated: boolean;
   level: string;
   mechanic: string | null;
   force: string | null;
@@ -10,7 +13,10 @@ export interface Exercise {
   primaryMuscles: string[];
   secondaryMuscles: string[];
   instructions: string[];
-  images: string[];
+  /** URLs absolutas; el backend las construye con su EXERCISE_IMAGES_BASE_URL. */
+  imageUrls: string[];
+  /** Clave del grupo muscular (pecho, espalda, hombros, brazos, piernas, core). */
+  muscleGroup: string | null;
 }
 
 /** Ejercicio dentro de un día de la rutina, con los datos del usuario. */
@@ -21,6 +27,9 @@ export interface PlanExercise {
   reps: number;
   /** null = ejercicio sin peso (peso corporal). */
   weightKg: number | null;
+  /** El backend los devuelve junto al ejercicio para no tener que consultar el catálogo. */
+  exerciseName?: string;
+  exerciseNameEs?: string;
 }
 
 export interface PlanDay {
@@ -65,4 +74,6 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  role: string;
+  emailVerified: boolean;
 }
