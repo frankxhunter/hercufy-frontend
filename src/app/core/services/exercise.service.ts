@@ -48,7 +48,15 @@ export class ExerciseService {
     return this.cache().get(id);
   }
 
+  /**
+   * Ficha completa de un ejercicio (con instrucciones). Los resúmenes del índice no traen
+   * instrucciones, así que la primera vez se piden al servidor; a partir de ahí se sirve de
+   * la caché, que es lo que permite ir previsualizando seguidos sin agotar el límite de
+   * peticiones del backend.
+   */
   async detail(id: string): Promise<Exercise> {
+    const cached = this.cache().get(id);
+    if (cached?.instructions.length) return cached;
     const full = await this.repo.detail(id);
     this.merge([full]);
     return full;

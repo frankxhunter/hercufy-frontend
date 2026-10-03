@@ -169,8 +169,42 @@ ion-toggle { --track-background-checked: var(--bronce); --handle-background-chec
 /* Buscador de ejercicios */
 .pick-row { appearance: none; background: none; border: none; border-bottom: 1px solid var(--linea); color: inherit; width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 2px; text-align: left; cursor: pointer; font: inherit; }
 .pick-row .ex-thumb { width: 52px; height: 52px; }
+.pick-row > span { flex: 1; min-width: 0; }
 .pick-row .sub { color: var(--tiza-suave); font-size: 14px; display: block; margin-top: 3px; }
+.pick-row .chev { flex: none; color: var(--tiza-suave); font-size: 18px; }
 .count { color: var(--tiza-suave); font-size: 14px; margin: 6px 0 2px; }
+
+/* Previsualización: hoja que sube sobre el buscador, con la foto grande por delante */
+.peek { position: fixed; inset: 0; z-index: 30; display: flex; align-items: flex-end; background: rgba(8, 11, 15, 0.74); animation: peek-fade 0.18s ease; }
+@keyframes peek-fade { from { opacity: 0; } }
+.peek-panel {
+  width: 100%; max-width: 640px; margin: 0 auto; max-height: 90vh;
+  display: flex; flex-direction: column; background: var(--superficie); border: 1px solid var(--linea);
+  border-bottom: none; border-radius: 22px 22px 0 0; box-shadow: 0 -22px 50px rgba(0, 0, 0, 0.45);
+  animation: peek-up 0.24s cubic-bezier(0.22, 0.7, 0.3, 1);
+}
+@keyframes peek-up { from { transform: translateY(28px); opacity: 0.35; } }
+.peek-grip { width: 44px; height: 5px; border-radius: 999px; background: #56626f; margin: 10px auto 2px; flex: none; }
+.peek-top { flex: none; display: flex; align-items: center; padding: 2px 0 0 8px; }
+.peek-top .icon-btn { font-size: 26px; color: var(--tiza); }
+.peek-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 22px 8px; }
+/* La foto ocupa una fracción de la altura de la ventana: así la hoja se adapta a cualquier
+   pantalla en vez de dejar que la imagen marque la altura y tape el texto. */
+.peek-shot { margin: 6px -22px 0; height: clamp(190px, 32vh, 330px); background: #e9ecef; overflow: hidden; }
+.peek-shot img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.peek-strip { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; }
+.peek-strip::-webkit-scrollbar { display: none; }
+.peek-strip img { flex: none; width: 56px; height: 56px; border-radius: 10px; object-fit: cover; border: 2px solid transparent; background: #e9ecef; padding: 0; cursor: pointer; }
+.peek-strip img.on { border-color: var(--bronce); }
+.peek-title { display: flex; gap: 14px; align-items: stretch; margin-top: 20px; }
+.peek-bar { width: 4px; flex: none; border-radius: 2px; background: var(--stripe, var(--bronce)); }
+.peek-kicker { display: block; color: var(--stripe, var(--bronce)); font: 600 12px/1 var(--font-body); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+.peek-title h2 { margin: 0; font: 700 32px/1 var(--font-display); }
+.peek-title .original { margin: 8px 0 0; color: var(--tiza-suave); font-size: 14px; }
+.peek-h3 { margin: 24px 0 0; font: 700 24px/1 var(--font-display); }
+.peek-actions { flex: none; display: grid; gap: 10px; padding: 14px 22px calc(18px + var(--ion-safe-area-bottom)); border-top: 1px solid var(--linea); }
+.peek-skel { height: 180px; border-radius: 18px; background: linear-gradient(90deg, var(--superficie-alta), #2b3542, var(--superficie-alta)); background-size: 200% 100%; animation: peek-sweep 1.2s linear infinite; }
+@keyframes peek-sweep { to { background-position: -200% 0; } }
 
 /* Filas de lista (rutinas, días) */
 .list-row { appearance: none; background: none; border: none; border-bottom: 1px solid var(--linea); color: inherit; width: 100%; display: flex; align-items: center; gap: 14px; padding: 16px 2px; text-align: left; cursor: pointer; font: inherit; }

@@ -170,10 +170,30 @@ export class PlanService {
     // El backend añade el ejercicio al final del día, así que es el último de la respuesta.
     const created = saved.days.find((d) => d.id === dayId)?.exercises[before];
     if (!created) throw new Error('No se ha podido añadir el ejercicio.');
-    return created;
+    if (created.id) return created;
+
+    // Red de seguridad: si el servidor devolviera el ejercicio sin id, la pantalla no debe
+    // quedarse con una entrada que después no se puede ni guardar ni reordenar.
+    await this.load(true);
+    const repaired = this.day(planId, dayId)?.exercises[before];
+    if (!repaired?.id) throw new Error('No se ha podido añadir el ejercicio.');
+    return repaired;
+  }
+
+  /**
+   * Los ejercicios se identifican por el id de su entrada en el día. Si alguno se queda sin id
+   * (respuesta incompleta del servidor), no se manda nada: primero se vuelve a pedir la rutina
+   * entera, porque una petición con un id vacío produce errores incomprensibles en el servidor.
+   */
+  private async requireEntryIds(planId: string, dayId: string): Promise<PlanExercise[]> {
+    const exercises = this.day(planId, dayId)?.exercises ?? [];
+    if (exercises.every((e) => !!e.id)) return exercises;
+    await this.load(true);
+    throw new Error('Se ha vuelto a pedir la rutina al servidor. Inténtalo de nuevo.');
   }
 
   async updateExercise(planId: string, dayId: string, pe: PlanExercise) {
+    await this.requireEntryIds(planId, dayId);
     this.adopt(
       await this.repo.updateExercise(planId, dayId, pe.id, {
         sets: pe.sets,
@@ -184,12 +204,14 @@ export class PlanService {
   }
 
   async removeExercise(planId: string, dayId: string, peId: string) {
+    await this.requireEntryIds(planId, dayId);
     this.adopt(await this.repo.removeExercise(planId, dayId, peId));
   }
 
   async moveExercise(planId: string, dayId: string, from: number, to: number) {
     const current = this.day(planId, dayId)?.exercises ?? [];
     if (to < 0 || to >= current.length || from === to) return;
+    await this.requireEntryIds(planId, dayId);
 
     const ordered = [...current];
     const [moved] = ordered.splice(from, 1);

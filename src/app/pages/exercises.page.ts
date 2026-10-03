@@ -13,7 +13,7 @@ import { ExerciseBrowserComponent } from '../ui/exercise-browser.component';
           <h1 class="display-xl">Ejercicios</h1>
           <p class="hero-sub">Consulta cómo se hace cada uno.</p>
         </header>
-        <div class="section-gap"><app-exercise-browser (picked)="open($event)" /></div>
+        <div class="section-gap"><app-exercise-browser mode="browse" (opened)="open($event)" /></div>
       </div>
     </ion-content>
   `,

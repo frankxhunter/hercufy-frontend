@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { IonContent, IonHeader, IonIcon, IonTitle, IonToolbar, ModalController } from '@ionic/angular';
+import { IonContent, IonHeader, IonIcon, IonTitle, IonToolbar, ModalController, NavController } from '@ionic/angular';
 import { ExerciseBrowserComponent } from './exercise-browser.component';
 
 @Component({
@@ -14,12 +14,19 @@ import { ExerciseBrowserComponent } from './exercise-browser.component';
       </ion-toolbar>
     </ion-header>
     <ion-content>
-      <div class="wrap"><app-exercise-browser (picked)="pick($event)" /></div>
+      <div class="wrap"><app-exercise-browser mode="pick" (picked)="pick($event)" (opened)="openDetail($event)" /></div>
     </ion-content>
   `,
 })
 export class ExercisePickerModal {
   private readonly modalCtrl = inject(ModalController);
+  private readonly nav = inject(NavController);
   pick(id: string) { this.modalCtrl.dismiss(id, 'pick'); }
   close() { this.modalCtrl.dismiss(null, 'cancel'); }
+
+  /** "Ver ficha completa" desde la previsualización: se cierra el selector y se abre la ficha. */
+  async openDetail(id: string) {
+    await this.modalCtrl.dismiss(null, 'detail');
+    await this.nav.navigateForward('/ejercicio/' + id);
+  }
 }

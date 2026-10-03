@@ -1,16 +1,21 @@
-import { Component, computed, effect, inject, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ExerciseService, SEARCH_PAGE_SIZE } from '../core/services/exercise.service';
 import { EQUIPMENT_ES, MUSCLE_ES, MUSCLE_GROUPS } from '../core/labels';
 import { ExerciseThumbComponent } from './exercise-thumb.component';
+import { ExercisePreviewComponent } from './exercise-preview.component';
 import { Exercise } from '../core/models';
 import { IonIcon } from '@ionic/angular';
 
-/** Buscador de ejercicios con filtro por grupo muscular. Lo usan la pestaña Ejercicios y el selector al añadir. */
+/**
+ * Buscador de ejercicios con filtro por grupo muscular. Lo usan la pestaña Ejercicios y el
+ * selector al añadir. En modo "pick" tocar una fila abre la previsualización y solo se añade
+ * desde ahí; en modo "browse" se abre directamente la ficha del ejercicio.
+ */
 @Component({
   selector: 'app-exercise-browser',
   standalone: true,
-  imports: [FormsModule, ExerciseThumbComponent],
+  imports: [FormsModule, ExerciseThumbComponent, ExercisePreviewComponent, IonIcon],
   template: `
     <input class="field" type="search" placeholder="Buscar por nombre o material" aria-label="Buscar ejercicio"
       [ngModel]="q()" (ngModelChange)="onQuery($event)" />
@@ -21,16 +26,20 @@ import { IonIcon } from '@ionic/angular';
       }
     </div>
     <p class="count">{{ total() }} {{ total() === 1 ? 'ejercicio' : 'ejercicios' }}</p>
+    @if (mode() === 'pick') {
+      <p class="count">Toca uno para verlo antes de añadirlo.</p>
+    }
     @if (loading()) {
       <p class="empty">Buscando...</p>
     }
     @for (e of results(); track e.id) {
-      <button type="button" class="pick-row" (click)="picked.emit(e.id)">
+      <button type="button" class="pick-row" (click)="tap(e)">
         <app-exercise-thumb [exerciseId]="e.id" />
         <span>
           <span class="ex-name">{{ e.nameEs }}</span>
           <span class="sub">{{ muscle(e) }}, {{ equipment(e.equipment) }}</span>
         </span>
+        <ion-icon class="chev" name="chevron-forward" />
       </button>
     } @empty {
       @if (!loading()) {
@@ -45,11 +54,19 @@ import { IonIcon } from '@ionic/angular';
     @if (error()) {
       <p class="form-error" role="alert">{{ error() }}</p>
     }
+
+    @if (preview(); as id) {
+      <app-exercise-preview [exerciseId]="id" [addable]="mode() === 'pick'"
+        (added)="picked.emit($event)" (viewed)="openDetail($event)" (closed)="preview.set(null)" />
+    }
   `,
 })
 export class ExerciseBrowserComponent {
   private readonly catalog = inject(ExerciseService);
+  /** "browse": al tocar, se abre la ficha. "pick": al tocar, se previsualiza y luego se añade. */
+  mode = input<'browse' | 'pick'>('browse');
   picked = output<string>();
+  opened = output<string>();
   groups = MUSCLE_GROUPS;
   q = signal('');
   group = signal<string | null>(null);
@@ -57,6 +74,7 @@ export class ExerciseBrowserComponent {
   total = signal(0);
   loading = signal(false);
   error = signal('');
+  preview = signal<string | null>(null);
   private page = 0;
 
   constructor() {
@@ -72,10 +90,23 @@ export class ExerciseBrowserComponent {
 
   onQuery(v: string) {
     this.q.set(v);
+    this.preview.set(null);
   }
 
   setGroup(g: string | null) {
     this.group.set(g);
+    this.preview.set(null);
+  }
+
+  /** En "browse" se abre la ficha; en "pick" se previsualiza antes de añadir. */
+  tap(e: Exercise) {
+    if (this.mode() === 'pick') this.preview.set(e.id);
+    else this.opened.emit(e.id);
+  }
+
+  openDetail(id: string) {
+    this.preview.set(null);
+    this.opened.emit(id);
   }
 
   private async search(reset = true) {
