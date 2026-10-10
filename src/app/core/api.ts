@@ -1,8 +1,8 @@
 import { HttpContextToken, HttpErrorResponse } from '@angular/common/http';
-import { API_BASE } from './config';
+import { API_ORIGIN } from './config';
 
 /** Raíz de la API: todos los endpoints cuelgan de aquí (/auth, /users, /exercises, /plans). */
-export const API_URL = `${API_BASE}/api`;
+export const API_URL = `${API_ORIGIN}/api`;
 
 /**
  * Marca una petición como parte del propio flujo de tokens (login, refresh, logout).

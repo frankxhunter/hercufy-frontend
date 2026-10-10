@@ -53,7 +53,18 @@ export function formatKg(n: number | null): string {
   return Number.isInteger(n) ? String(n) : n.toLocaleString('es-ES', { maximumFractionDigits: 2 });
 }
 
-export const uid = (): string => crypto.randomUUID();
+/**
+ * Identificador único para lo que se crea en el navegador (borrador de Hercules, mensajes).
+ * crypto.randomUUID solo existe en contextos seguros: si la app se sirve por http desde la red
+ * local para abrirla en el móvil, no está y haría fallar el arranque de esas pantallas.
+ */
+export const uid = (): string =>
+  typeof crypto?.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+      });
 
 export const normalize = (s: string): string =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();

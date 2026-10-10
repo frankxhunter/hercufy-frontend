@@ -5,7 +5,7 @@ import { EXERCISE_PLACEHOLDER as PLACEHOLDER } from './placeholder-image';
 @Component({
   selector: 'app-exercise-thumb',
   standalone: true,
-  template: `<img class="ex-thumb" [src]="url()" alt="" loading="lazy" (error)="fallback($event)" />`,
+  template: `<img class="ex-thumb" [src]="url()" alt="" loading="lazy" decoding="async" (error)="fallback($event)" />`,
   styles: [':host{display:inline-flex;line-height:0}'],
 })
 export class ExerciseThumbComponent {

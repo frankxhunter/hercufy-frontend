@@ -3,7 +3,7 @@ import {
   inject,
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
-  provideZoneChangeDetection,
+  provideZoneChangeDetection, isDevMode,
 } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
@@ -16,6 +16,8 @@ import { PlanService } from './core/services/plan.service';
 import { ExerciseService } from './core/services/exercise.service';
 import { AuthService } from './core/services/auth.service';
 import { authInterceptor } from './core/services/auth.interceptor';
+import { provideServiceWorker } from '@angular/service-worker';
+import { Capacitor } from '@capacitor/core';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -42,6 +44,15 @@ export const appConfig: ApplicationConfig = {
           await plans.load();
         }
       })();
+    }),
+    // PWA: solo en producción (ngswConfigPath está en la configuración production de angular.json,
+    // así que ng serve nunca registra el service worker). registerImmediately para que la app
+    // quede disponible sin conexión en cuanto arranca, no 30 segundos después.
+    // Dentro del APK no se registra: los assets los sirve el WebView de Capacitor desde el
+    // paquete y un service worker se quedaría sirviendo la versión anterior tras una actualización.
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: !isDevMode() && !Capacitor.isNativePlatform(),
+      registrationStrategy: 'registerImmediately',
     }),
   ],
 };

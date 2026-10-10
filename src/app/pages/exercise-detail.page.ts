@@ -32,7 +32,7 @@ type Detail =
             <div class="wrap">
               <div class="gallery">
                 @for (img of images(); track img; let i = $index) {
-                  <img [src]="img" [alt]="title() + ', imagen ' + (i + 1)" loading="lazy" />
+                  <img [src]="img" [alt]="title() + ', imagen ' + (i + 1)" loading="lazy" decoding="async" />
                 }
               </div>
               <h1 class="display-l" style="margin-top:22px">{{ title() }}</h1>

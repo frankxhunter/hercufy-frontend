@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fondo "hierro" del tema de la app (#12161c), para que las barras del sistema y el
+         fondo de ventana combinen con la interfaz en lugar de quedar en claro. -->
+    <color name="hercufy_background">#12161C</color>
+</resources>

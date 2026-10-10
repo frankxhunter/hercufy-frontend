@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <!-- Tema que Capacitor aplica a la actividad (BridgeActivity.setTheme). La app siempre es
+         oscura, asi que fijamos el fondo de ventana y las barras del sistema en "hierro" e
+         iconos claros: sin esto, con el tema DayNight en modo claro las barras salian en blanco. -->
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:background">@null</item>
+        <item name="android:windowBackground">@color/hercufy_background</item>
+        <item name="android:statusBarColor">@color/hercufy_background</item>
+        <item name="android:navigationBarColor">@color/hercufy_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+
+    <!-- La ventana se crea con este tema (es el del <activity> en el manifest), asi que los
+         colores y la apariencia de las barras hay que fijarlos tambien aqui; los del tema de
+         despues del splash no se releen para las barras. -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="android:background">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">@color/hercufy_background</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+        <item name="android:statusBarColor">@color/hercufy_background</item>
+        <item name="android:navigationBarColor">@color/hercufy_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>

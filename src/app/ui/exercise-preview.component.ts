@@ -1,4 +1,4 @@
-import { Component, HostListener, computed, inject, input, output, signal } from '@angular/core';
+import { Component, OnDestroy, computed, inject, input, output, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { IonButtons, IonBackButton } from '@ionic/angular';
 import { catchError, from, map, of, startWith, switchMap } from 'rxjs';
@@ -46,13 +46,13 @@ const MECHANIC_ES: Record<string, string> = { compound: 'Compuesto', isolation: 
             }
             @case ('ready') {
               <div class="peek-shot">
-                <img [src]="shot()" [alt]="title() + ', imagen ' + (frame() + 1)" (error)="broken($event)" />
+                <img [src]="shot()" [alt]="title() + ', imagen ' + (frame() + 1)" decoding="async" fetchpriority="high" (error)="broken($event)" />
               </div>
               @if (frames().length > 1) {
                 <div class="peek-strip">
                   @for (img of frames(); track img; let i = $index) {
                     <img [src]="img" [class.on]="i === frame()" [attr.aria-label]="'Ver la imagen ' + (i + 1)"
-                      [attr.aria-pressed]="i === frame()" (click)="frame.set(i)" />
+                      [attr.aria-pressed]="i === frame()" loading="lazy" decoding="async" (click)="frame.set(i)" />
                   }
                 </div>
               }
@@ -101,7 +101,7 @@ const MECHANIC_ES: Record<string, string> = { compound: 'Compuesto', isolation: 
     </div>
   `,
 })
-export class ExercisePreviewComponent {
+export class ExercisePreviewComponent implements OnDestroy {
   private readonly catalog = inject(ExerciseService);
 
   exerciseId = input.required<string>();
@@ -179,9 +179,25 @@ export class ExercisePreviewComponent {
     if (ev.target === ev.currentTarget) this.closed.emit();
   }
 
-  @HostListener('document:keydown.escape')
-  onEscape() {
+  /**
+   * Escape cierra solo esta hoja. Se escucha en fase de captura sobre el documento y se corta
+   * la propagación a propósito: Ionic cierra el último overlay abierto al pulsar Escape
+   * (utils/overlays.js), y como esta hoja vive dentro del modal del selector, sin ese corte se
+   * cerrarían los dos de golpe. Con la hoja abierta, el primer Escape es suyo y el segundo
+   * cierra el selector.
+   */
+  private readonly onEscape = (ev: KeyboardEvent) => {
+    if (ev.key !== 'Escape') return;
+    ev.stopPropagation();
     this.closed.emit();
+  };
+
+  constructor() {
+    document.addEventListener('keydown', this.onEscape, true);
+  }
+
+  ngOnDestroy() {
+    document.removeEventListener('keydown', this.onEscape, true);
   }
 
   broken(ev: Event) {
