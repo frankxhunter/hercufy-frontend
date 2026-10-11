@@ -175,9 +175,11 @@ export function apiMessage(err: unknown, fallback = DEFAULT_MESSAGE): string {
 
 function extractBody(err: HttpErrorResponse): string {
   if (typeof err.error === 'string') return err.error.trim();
-  // El único error en JSON es el 429 del limitador de peticiones.
+  // Errores JSON: Spring Security (error, message), RateLimiter (error), validación (Field:)
   if (err.error && typeof err.error === 'object') {
-    const json = err.error as { error?: unknown };
+    const json = err.error as { error?: unknown; message?: unknown };
+    // Spring Security default: { error: "Forbidden", message: "Access Denied" }
+    if (typeof json.message === 'string' && json.message.trim()) return json.message.trim();
     if (typeof json.error === 'string') return json.error.trim();
   }
   return '';

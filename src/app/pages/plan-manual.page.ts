@@ -4,38 +4,40 @@ import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar,
 import { PlanService } from '../core/services/plan.service';
 import { WEEKDAYS } from '../core/labels';
 import { showToast } from '../core/util';
+import { TranslatePipe } from '@ngx-translate/core';
+
 
 @Component({
   selector: 'app-plan-manual',
   standalone: true,
-  imports: [FormsModule, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonContent],
+  imports: [FormsModule, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonContent, TranslatePipe],
   template: `
     <ion-header class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start"><ion-back-button defaultHref="/rutinas/nueva" text="" /></ion-buttons>
-        <ion-title>Crear a mano</ion-title>
+        <ion-title>{{ 'planManual.title' | translate }}</ion-title>
       </ion-toolbar>
     </ion-header>
     <ion-content>
       <div class="wrap">
-        <label class="field-label" for="plan-name">Nombre de la rutina</label>
-        <input id="plan-name" class="field" placeholder="Por ejemplo, Volumen de invierno" [ngModel]="name()" (ngModelChange)="name.set($event)" />
+        <label class="field-label" for="plan-name">{{ 'planManual.planNameLabel' | translate }}</label>
+        <input id="plan-name" class="field" [placeholder]="'planManual.planNamePlaceholder' | translate" [ngModel]="name()" (ngModelChange)="name.set($event)" />
 
-        <p class="field-label">Días en los que entrenas</p>
-        <div class="chips" role="group" aria-label="Días de entrenamiento">
+        <p class="field-label">{{ 'planManual.trainingDaysLabel' | translate }}</p>
+        <div class="chips" role="group" [attr.aria-label]="'planManual.trainingDaysAria' | translate">
           @for (w of week; track w.n) {
             <button type="button" class="chip" [class.on]="isOn(w.n)" [attr.aria-pressed]="isOn(w.n)" (click)="toggle(w.n)">{{ w.name }}</button>
           }
         </div>
 
         @for (w of chosen(); track w.n) {
-          <label class="field-label" [attr.for]="'day-' + w.n">{{ w.name }}: ¿qué entrenas?</label>
-          <input [id]="'day-' + w.n" class="field" placeholder="Pecho, hombro y tríceps"
+          <label class="field-label" [attr.for]="'day-' + w.n">{{ w.name }}: {{ 'planManual.dayNameLabel' | translate }}</label>
+          <input [id]="'day-' + w.n" class="field" [placeholder]="'planManual.dayNamePlaceholder' | translate"
             [ngModel]="dayNames()[w.n] || ''" (ngModelChange)="setName(w.n, $event)" />
         }
 
-        <button type="button" class="btn btn-primary btn-block" style="margin-top:28px" [disabled]="!canCreate()" (click)="create()">Crear rutina</button>
-        <p class="note">Después podrás añadir los ejercicios de cada día.</p>
+        <button type="button" class="btn btn-primary btn-block" style="margin-top:28px" [disabled]="!canCreate()" (click)="create()">{{ 'planManual.createButton' | translate }}</button>
+        <p class="note">{{ 'planManual.note' | translate }}</p>
       </div>
     </ion-content>
   `,

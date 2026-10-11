@@ -8,6 +8,8 @@ import {
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideIonicAngular } from '@ionic/angular';
+import { provideTranslateService } from '@ngx-translate/core';
+import { TRANSLATE_HTTP_LOADER_CONFIG } from '@ngx-translate/http-loader';
 import { routes } from './app.routes';
 import { HttpPlanRepository, PlanRepository } from './core/services/plan.repository';
 import { HttpExerciseRepository, ExerciseRepository } from './core/services/exercise.repository';
@@ -26,6 +28,11 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withComponentInputBinding()),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideIonicAngular({ mode: 'md' }),
+    { provide: TRANSLATE_HTTP_LOADER_CONFIG, useValue: { resources: [{ prefix: './assets/i18n/', suffix: '.json' }] } },
+    provideTranslateService({
+      lang: 'es',
+      fallbackLang: 'en',
+    }),
     // Fuente de datos real: el backend Spring Boot es el único que decide qué es una rutina.
     { provide: PlanRepository, useClass: HttpPlanRepository },
     { provide: ExerciseRepository, useClass: HttpExerciseRepository },

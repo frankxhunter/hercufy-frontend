@@ -1,11 +1,13 @@
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ExerciseService, SEARCH_PAGE_SIZE } from '../core/services/exercise.service';
-import { EQUIPMENT_ES, MUSCLE_ES, MUSCLE_GROUPS } from '../core/labels';
+import { MUSCLE_ES, EQUIPMENT_ES, MUSCLE_GROUPS } from '../core/labels';
 import { ExerciseThumbComponent } from './exercise-thumb.component';
 import { ExercisePreviewComponent } from './exercise-preview.component';
 import { Exercise } from '../core/models';
 import { IonIcon } from '@ionic/angular';
+import { TranslatePipe } from '@ngx-translate/core';
+
 
 /**
  * Buscador de ejercicios con filtro por grupo muscular. Lo usan la pestaña Ejercicios y el
@@ -15,22 +17,22 @@ import { IonIcon } from '@ionic/angular';
 @Component({
   selector: 'app-exercise-browser',
   standalone: true,
-  imports: [FormsModule, ExerciseThumbComponent, ExercisePreviewComponent, IonIcon],
+  imports: [FormsModule, ExerciseThumbComponent, ExercisePreviewComponent, IonIcon, TranslatePipe],
   template: `
-    <input class="field" type="search" placeholder="Buscar por nombre o material" aria-label="Buscar ejercicio"
+    <input class="field" type="search" [placeholder]="'exerciseBrowser.searchPlaceholder' | translate" [aria-label]="'exerciseBrowser.searchAria' | translate"
       [ngModel]="q()" (ngModelChange)="onQuery($event)" />
     <div class="chips" style="margin-top:10px">
-      <button type="button" class="chip" [class.on]="!group()" (click)="setGroup(null)">Todos</button>
+      <button type="button" class="chip" [class.on]="!group()" (click)="setGroup(null)">{{ 'exerciseBrowser.allMuscles' | translate }}</button>
       @for (g of groups; track g.key) {
         <button type="button" class="chip" [class.on]="group() === g.key" (click)="setGroup(g.key)">{{ g.label }}</button>
       }
     </div>
-    <p class="count">{{ total() }} {{ total() === 1 ? 'ejercicio' : 'ejercicios' }}</p>
+    <p class="count">{{ total() }} {{ total() === 1 ? ('exerciseBrowser.count_one' | translate) : ('exerciseBrowser.count_other' | translate) }}</p>
     @if (mode() === 'pick') {
-      <p class="count">Toca uno para verlo antes de añadirlo.</p>
+      <p class="count">{{ 'exerciseBrowser.pickHint' | translate }}</p>
     }
     @if (loading()) {
-      <p class="empty">Buscando...</p>
+      <p class="empty">{{ 'exerciseBrowser.loading' | translate }}</p>
     }
     @for (e of results(); track e.id) {
       <button type="button" class="pick-row" (click)="tap(e)">
@@ -43,12 +45,12 @@ import { IonIcon } from '@ionic/angular';
       </button>
     } @empty {
       @if (!loading()) {
-        <p class="empty">No hay ejercicios con ese nombre. Prueba con otra palabra o quita el filtro.</p>
+        <p class="empty">{{ 'exerciseBrowser.empty' | translate }}</p>
       }
     }
     @if (!loading() && results().length < total()) {
       <div style="margin-top:12px;text-align:center">
-        <button type="button" class="btn btn-ghost btn-sm" (click)="loadMore()">Ver más</button>
+        <button type="button" class="btn btn-ghost btn-sm" (click)="loadMore()">{{ 'exerciseBrowser.loadMore' | translate }}</button>
       </div>
     }
     @if (error()) {

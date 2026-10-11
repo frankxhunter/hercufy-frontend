@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { IonContent } from '@ionic/angular';
 import { API_URL, SKIP_AUTH, apiMessage } from '../core/api';
 import { LogoComponent } from '../ui/logo.component';
+import { TranslateService, TranslatePipe } from '@ngx-translate/core';
 
 type State = 'working' | 'ok' | 'error';
 
@@ -15,25 +16,25 @@ type State = 'working' | 'ok' | 'error';
 @Component({
   selector: 'app-confirm-email',
   standalone: true,
-  imports: [IonContent, RouterLink, LogoComponent],
+  imports: [IonContent, RouterLink, LogoComponent, TranslatePipe],
   template: `
     <ion-content>
       <div class="auth">
         <div class="brand"><app-logo [size]="42" /><span class="wordmark">Hercufy</span></div>
         @switch (state()) {
           @case ('working') {
-            <h1 class="auth-title">Confirmando tu correo…</h1>
-            <p class="auth-sub">Un momento.</p>
+            <h1 class="auth-title">{{ 'auth.confirmEmail.workingTitle' | translate }}</h1>
+            <p class="auth-sub">{{ 'auth.confirmEmail.workingSubtitle' | translate }}</p>
           }
           @case ('ok') {
-            <h1 class="auth-title">Correo confirmado.</h1>
-            <p class="auth-sub">Ya puedes entrar y empezar con tu rutina.</p>
-            <a class="btn btn-primary btn-block" routerLink="/login">Ir a entrar</a>
+            <h1 class="auth-title">{{ 'auth.confirmEmail.successTitle' | translate }}</h1>
+            <p class="auth-sub">{{ 'auth.confirmEmail.successSubtitle' | translate }}</p>
+            <a class="btn btn-primary btn-block" routerLink="/login">{{ 'auth.confirmEmail.goToLogin' | translate }}</a>
           }
           @case ('error') {
-            <h1 class="auth-title">No hemos podido confirmarlo.</h1>
+            <h1 class="auth-title">{{ 'auth.confirmEmail.errorTitle' | translate }}</h1>
             <p class="auth-sub">{{ message() }}</p>
-            <a class="btn btn-ghost btn-block" routerLink="/login">Volver al acceso</a>
+            <a class="btn btn-ghost btn-block" routerLink="/login">{{ 'auth.confirmEmail.backToLogin' | translate }}</a>
           }
         }
       </div>
@@ -43,6 +44,7 @@ type State = 'working' | 'ok' | 'error';
 export class ConfirmEmailPage {
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
+  private readonly translate = inject(TranslateService);
 
   readonly state = signal<State>('working');
   readonly message = signal('');
@@ -55,7 +57,7 @@ export class ConfirmEmailPage {
     const token = this.route.snapshot.queryParamMap.get('token');
     if (!token) {
       this.state.set('error');
-      this.message.set('El enlace no incluye el token de confirmación.');
+      this.message.set(this.translate.instant('errors.invalidToken'));
       return;
     }
     try {
@@ -69,7 +71,7 @@ export class ConfirmEmailPage {
       this.state.set('ok');
     } catch (e) {
       this.state.set('error');
-      this.message.set(apiMessage(e, 'El enlace no es válido o ha caducado.'));
+      this.message.set(apiMessage(e, this.translate.instant('errors.invalidToken')));
     }
   }
 }

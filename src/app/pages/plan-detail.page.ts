@@ -4,18 +4,19 @@ import { PlanService } from '../core/services/plan.service';
 import { WEEKDAYS } from '../core/labels';
 import { showToast } from '../core/util';
 import { TrainingPlan } from '../core/models';
+import { TranslateService, TranslatePipe } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-plan-detail',
   standalone: true,
-  imports: [IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonContent, IonIcon, IonToggle],
+  imports: [IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonContent, IonIcon, IonToggle, TranslatePipe],
   template: `
     <ion-header class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start"><ion-back-button defaultHref="/tabs/rutinas" text="" /></ion-buttons>
-        <ion-title>Rutina</ion-title>
+        <ion-title>{{ 'planDetail.title' | translate }}</ion-title>
         @if (plan()) {
-          <button slot="end" type="button" class="icon-btn" (click)="rename()" aria-label="Cambiar nombre"><ion-icon name="create-outline" /></button>
+          <button slot="end" type="button" class="icon-btn" (click)="rename()" [aria-label]="'planDetail.renameAria' | translate"><ion-icon name="create-outline" /></button>
         }
       </ion-toolbar>
     </ion-header>
@@ -24,8 +25,8 @@ import { TrainingPlan } from '../core/models';
         <div class="wrap">
           <h1 class="display-l" style="margin-top:6px">{{ p.name }}</h1>
           <div class="toggle-row" style="margin-top:14px">
-            <span>Rutina activa<span class="muted" style="display:block;font-size:14px;margin-top:2px">Es la que verás en la pestaña Hoy</span></span>
-            <ion-toggle [checked]="p.active" (ionChange)="setActive($event.detail.checked)" aria-label="Rutina activa" />
+            <span>{{ 'planDetail.activeLabel' | translate }}<span class="muted" style="display:block;font-size:14px;margin-top:2px">{{ 'planDetail.activeHint' | translate }}</span></span>
+            <ion-toggle [checked]="p.active" (ionChange)="setActive($event.detail.checked)" [aria-label]="'planDetail.activeLabel' | translate" />
           </div>
 
           <div class="section-gap">
@@ -35,24 +36,24 @@ import { TrainingPlan } from '../core/models';
                   <span class="dayname">{{ w.name }}</span>
                   <span class="grow">
                     <span class="title">{{ d.name }}</span>
-                    <span class="sub">{{ d.exercises.length }} {{ d.exercises.length === 1 ? 'ejercicio' : 'ejercicios' }}</span>
+                    <span class="sub">{{ d.exercises.length }} {{ d.exercises.length === 1 ? ('planDetail.exercisesCount_one' | translate) : ('planDetail.exercisesCount_other' | translate) }}</span>
                   </span>
                   <ion-icon class="chev" name="chevron-forward" />
                 </button>
               } @else {
                 <button type="button" class="list-row rest" (click)="addDay(p, w.n)">
                   <span class="dayname">{{ w.name }}</span>
-                  <span class="grow muted">Descanso</span>
-                  <span class="btn btn-ghost btn-sm">Añadir día</span>
+                  <span class="grow muted">{{ 'planDetail.restDay' | translate }}</span>
+                  <span class="btn btn-ghost btn-sm">{{ 'planDetail.addDay' | translate }}</span>
                 </button>
               }
             }
           </div>
 
-          <button type="button" class="btn btn-danger btn-block" style="margin-top:28px" (click)="remove(p)">Eliminar rutina</button>
+          <button type="button" class="btn btn-danger btn-block" style="margin-top:28px" (click)="remove(p)">{{ 'planDetail.deletePlan' | translate }}</button>
         </div>
       } @else {
-        <div class="wrap"><p class="empty"><strong>Esta rutina ya no existe</strong>Vuelve a la lista para elegir otra.</p></div>
+        <div class="wrap"><p class="empty"><strong>{{ 'planDetail.notFound' | translate }}</strong>{{ 'planDetail.notFoundAction' | translate }}</p></div>
       }
     </ion-content>
   `,
@@ -62,6 +63,7 @@ export class PlanDetailPage {
   private readonly nav = inject(NavController);
   private readonly alerts = inject(AlertController);
   private readonly toastCtrl = inject(ToastController);
+  private readonly translate = inject(TranslateService);
 
   planId = input.required<string>();
   week = WEEKDAYS;
@@ -80,7 +82,6 @@ export class PlanDetailPage {
       await this.plans.setActive(p.id, active);
     } catch (e) {
       await showToast(this.toastCtrl, (e as Error).message);
-      // El interruptor ya se ve cambiado: se vuelve a pedir la rutina para mostrar lo real.
       await this.plans.load(true);
     }
   }
@@ -89,9 +90,9 @@ export class PlanDetailPage {
     const p = this.plan();
     if (!p) return;
     const a = await this.alerts.create({
-      header: 'Nombre de la rutina',
+      header: this.translate.instant('planDetail.renameTitle'),
       inputs: [{ name: 'name', type: 'text', value: p.name }],
-      buttons: [{ text: 'Cancelar', role: 'cancel' }, { text: 'Guardar', role: 'confirm' }],
+      buttons: [{ text: this.translate.instant('common.cancel'), role: 'cancel' }, { text: this.translate.instant('common.save'), role: 'confirm' }],
     });
     await a.present();
     const { data, role } = await a.onDidDismiss();
@@ -107,10 +108,10 @@ export class PlanDetailPage {
   async addDay(p: TrainingPlan, dow: number) {
     const w = WEEKDAYS.find((x) => x.n === dow)!;
     const a = await this.alerts.create({
-      header: `Añadir el ${w.name.toLowerCase()}`,
-      message: '¿Qué entrenas ese día?',
-      inputs: [{ name: 'name', type: 'text', placeholder: 'Pecho y tríceps' }],
-      buttons: [{ text: 'Cancelar', role: 'cancel' }, { text: 'Añadir día', role: 'confirm' }],
+      header: this.translate.instant('planDetail.addDayTitle', { day: w.name.toLowerCase() }),
+      message: this.translate.instant('planDetail.addDayMessage'),
+      inputs: [{ name: 'name', type: 'text', placeholder: this.translate.instant('planDetail.addDayPlaceholder') }],
+      buttons: [{ text: this.translate.instant('common.cancel'), role: 'cancel' }, { text: this.translate.instant('planDetail.addDayButton'), role: 'confirm' }],
     });
     await a.present();
     const { data, role } = await a.onDidDismiss();
@@ -126,9 +127,9 @@ export class PlanDetailPage {
 
   async remove(p: TrainingPlan) {
     const a = await this.alerts.create({
-      header: '¿Eliminar esta rutina?',
-      message: `«${p.name}» se borrará con todos sus días y ejercicios.`,
-      buttons: [{ text: 'Cancelar', role: 'cancel' }, { text: 'Eliminar', role: 'confirm' }],
+      header: this.translate.instant('planDetail.deleteConfirmTitle'),
+      message: this.translate.instant('planDetail.deleteConfirmMessage', { name: p.name }),
+      buttons: [{ text: this.translate.instant('common.cancel'), role: 'cancel' }, { text: this.translate.instant('common.delete'), role: 'confirm' }],
     });
     await a.present();
     const { role } = await a.onDidDismiss();
@@ -139,7 +140,7 @@ export class PlanDetailPage {
       await showToast(this.toastCtrl, (e as Error).message);
       return;
     }
-    await showToast(this.toastCtrl, 'Rutina eliminada');
+    await showToast(this.toastCtrl, this.translate.instant('planDetail.toastDeleted'));
     await this.nav.navigateRoot('/tabs/rutinas');
   }
 }

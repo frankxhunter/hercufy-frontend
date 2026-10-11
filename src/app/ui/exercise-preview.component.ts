@@ -3,17 +3,14 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { IonButtons, IonBackButton } from '@ionic/angular';
 import { catchError, from, map, of, startWith, switchMap } from 'rxjs';
 import { ExerciseService } from '../core/services/exercise.service';
-import { EQUIPMENT_ES, LEVEL_ES, MUSCLE_ES } from '../core/labels';
 import { Exercise } from '../core/models';
 import { EXERCISE_PLACEHOLDER } from './placeholder-image';
+import { TranslateService, TranslatePipe } from '@ngx-translate/core';
 
 type State =
   | { kind: 'loading' }
   | { kind: 'ready'; ex: Exercise }
   | { kind: 'error'; message: string };
-
-const CATEGORY_ES: Record<string, string> = { strength: 'Fuerza', cardio: 'Cardio', stretching: 'Estiramientos' };
-const MECHANIC_ES: Record<string, string> = { compound: 'Compuesto', isolation: 'Aislamiento' };
 
 /**
  * Hoja de previsualización: fotos, datos y pasos de un ejercicio. Al añadirlo a una rutina
@@ -23,12 +20,12 @@ const MECHANIC_ES: Record<string, string> = { compound: 'Compuesto', isolation: 
 @Component({
   selector: 'app-exercise-preview',
   standalone: true,
-  imports: [IonButtons, IonBackButton],
+  imports: [IonButtons, IonBackButton, TranslatePipe],
   template: `
-    <div class="peek" role="dialog" aria-modal="true" [attr.aria-label]="'Vista previa de ' + title()" (click)="backdrop($event)">
+    <div class="peek" role="dialog" aria-modal="true" [attr.aria-label]="'exercisePreview.previewOf' | translate: {title: title()}" (click)="backdrop($event)">
       <div class="peek-panel" [style.--stripe]="color()">
         <div class="peek-top">
-            <ion-buttons slot="start" ><ion-back-button defaultHref="" (click)="closed.emit()" text="" aria-label="Volver al buscador" /></ion-buttons>
+            <ion-buttons slot="start" ><ion-back-button defaultHref="" (click)="closed.emit()" text="" [aria-label]="'exercisePreview.backAria' | translate" /></ion-buttons>
         </div>
 
         <div class="peek-body">
@@ -40,8 +37,8 @@ const MECHANIC_ES: Record<string, string> = { compound: 'Compuesto', isolation: 
             }
             @case ('error') {
               <div class="empty">
-                <strong>No se ha podido cargar la ficha</strong>{{ errorMessage() }}
-                <div style="margin-top:16px"><button type="button" class="btn btn-sm" (click)="retry()">Reintentar</button></div>
+                <strong>{{ 'exercisePreview.errorTitle' | translate }}</strong>{{ errorMessage() }}
+                <div style="margin-top:16px"><button type="button" class="btn btn-sm" (click)="retry()">{{ 'exercisePreview.retry' | translate }}</button></div>
               </div>
             }
             @case ('ready') {
@@ -51,7 +48,7 @@ const MECHANIC_ES: Record<string, string> = { compound: 'Compuesto', isolation: 
               @if (frames().length > 1) {
                 <div class="peek-strip">
                   @for (img of frames(); track img; let i = $index) {
-                    <img [src]="img" [class.on]="i === frame()" [attr.aria-label]="'Ver la imagen ' + (i + 1)"
+                    <img [src]="img" [class.on]="i === frame()" [attr.aria-label]="'exercisePreview.viewImage' | translate: {num: i + 1}"
                       [attr.aria-pressed]="i === frame()" loading="lazy" decoding="async" (click)="frame.set(i)" />
                   }
                 </div>
@@ -67,23 +64,23 @@ const MECHANIC_ES: Record<string, string> = { compound: 'Compuesto', isolation: 
               </div>
 
               <dl class="facts">
-                <div><dt>Músculo principal</dt><dd>{{ primary() }}</dd></div>
-                @if (secondary()) { <div><dt>Secundarios</dt><dd>{{ secondary() }}</dd></div> }
-                <div><dt>Material</dt><dd>{{ equipment() }}</dd></div>
-                <div><dt>Nivel</dt><dd>{{ level() }}</dd></div>
-                <div><dt>Tipo</dt><dd>{{ kind() }}</dd></div>
+                <div><dt>{{ 'exercisePreview.musclePrimary' | translate }}</dt><dd>{{ primary() }}</dd></div>
+                @if (secondary()) { <div><dt>{{ 'exercisePreview.muscleSecondary' | translate }}</dt><dd>{{ secondary() }}</dd></div> }
+                <div><dt>{{ 'exercisePreview.equipment' | translate }}</dt><dd>{{ equipment() }}</dd></div>
+                <div><dt>{{ 'exercisePreview.level' | translate }}</dt><dd>{{ level() }}</dd></div>
+                <div><dt>{{ 'exercisePreview.type' | translate }}</dt><dd>{{ kind() }}</dd></div>
               </dl>
 
-              <h3 class="peek-h3">Cómo se hace</h3>
+              <h3 class="peek-h3">{{ 'exercisePreview.instructionsTitle' | translate }}</h3>
               @if (steps().length) {
                 <ol class="steps">
                   @for (s of steps(); track $index) { <li>{{ s }}</li> }
                 </ol>
                 @if (!translated()) {
-                  <p class="note">Instrucciones en inglés: son las de la ficha original del catálogo.</p>
+                  <p class="note">{{ 'exercisePreview.notTranslated' | translate }}</p>
                 }
               } @else {
-                <p class="note">Este ejercicio no trae instrucciones en el catálogo.</p>
+                <p class="note">{{ 'exercisePreview.noInstructions' | translate }}</p>
               }
             }
           }
@@ -92,10 +89,10 @@ const MECHANIC_ES: Record<string, string> = { compound: 'Compuesto', isolation: 
         <div class="peek-actions">
           @if (addable() && ex()) {
             <button type="button" class="btn btn-primary btn-block" (click)="added.emit(exerciseId())">
-              Añadir a la rutina
+              {{ 'exercisePreview.addToRoutine' | translate }}
             </button>
           }
-          <button type="button" class="btn btn-block" (click)="viewed.emit(exerciseId())">Ver ficha completa</button>
+          <button type="button" class="btn btn-block" (click)="viewed.emit(exerciseId())">{{ 'exercisePreview.viewFull' | translate }}</button>
         </div>
       </div>
     </div>
@@ -103,6 +100,7 @@ const MECHANIC_ES: Record<string, string> = { compound: 'Compuesto', isolation: 
 })
 export class ExercisePreviewComponent implements OnDestroy {
   private readonly catalog = inject(ExerciseService);
+  private readonly translate = inject(TranslateService);
 
   exerciseId = input.required<string>();
   /** true cuando el ejercicio se está eligiendo para añadirlo a una rutina. */
@@ -148,25 +146,25 @@ export class ExercisePreviewComponent implements OnDestroy {
   frames = computed(() => this.ex()?.imageUrls ?? []);
   shot = computed(() => this.frames()[this.frame()] ?? this.frames()[0] ?? EXERCISE_PLACEHOLDER);
   steps = computed(() => this.ex()?.instructions ?? []);
-  group = computed(() => this.catalog.groupOf(this.ex())?.label ?? 'Ejercicio');
+  group = computed(() => this.catalog.groupOf(this.ex())?.label ?? this.translate.instant('exercisePreview.defaultGroup'));
   color = computed(() => this.catalog.groupOf(this.ex())?.color ?? 'var(--bronce)');
   primary = computed(() => {
     const m = this.ex()?.primaryMuscles[0];
-    return m ? (MUSCLE_ES[m] ?? m) : '—';
+    return m ? (this.translate.instant('muscles.' + m) ?? m) : this.translate.instant('exercisePreview.noData');
   });
-  secondary = computed(() => this.ex()?.secondaryMuscles.map((m) => MUSCLE_ES[m] ?? m).join(', ') ?? '');
+  secondary = computed(() => this.ex()?.secondaryMuscles.map((m) => this.translate.instant('muscles.' + m) ?? m).join(', ') ?? '');
   equipment = computed(() => {
     const e = this.ex()?.equipment;
-    return e ? (EQUIPMENT_ES[e] ?? e) : 'Sin material';
+    return e ? (this.translate.instant('equipment.' + e) ?? e) : this.translate.instant('exercisePreview.noEquipment');
   });
   level = computed(() => {
     const l = this.ex()?.level;
-    return l ? (LEVEL_ES[l] ?? l) : '—';
+    return l ? (this.translate.instant('levels.' + l) ?? l) : this.translate.instant('exercisePreview.noData');
   });
   kind = computed(() => {
     const e = this.ex();
-    if (!e) return '—';
-    return [CATEGORY_ES[e.category] ?? e.category, MECHANIC_ES[e.mechanic ?? ''] ?? ''].filter(Boolean).join(' · ') || '—';
+    if (!e) return this.translate.instant('exercisePreview.noData');
+    return [this.translate.instant('categories.' + e.category) ?? e.category, this.translate.instant('mechanics.' + (e.mechanic ?? ''))].filter(Boolean).join(' · ') || this.translate.instant('exercisePreview.noData');
   });
 
   retry() {

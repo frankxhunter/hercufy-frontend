@@ -7,11 +7,13 @@ import { showToast } from '../core/util';
 import { LogoComponent } from '../ui/logo.component';
 import { ExerciseRowComponent } from '../ui/exercise-row.component';
 import { EditExerciseModal, EditResult } from '../ui/edit-exercise.modal';
+import { TranslateService, TranslatePipe } from '@ngx-translate/core';
+import { ReplacePipe } from '../core/pipes/replace.pipe';
 
 @Component({
   selector: 'app-today',
   standalone: true,
-  imports: [IonContent, LogoComponent, ExerciseRowComponent],
+  imports: [IonContent, LogoComponent, ExerciseRowComponent, TranslatePipe, ReplacePipe],
   template: `
     <ion-content>
       <div class="wrap">
@@ -21,11 +23,11 @@ import { EditExerciseModal, EditResult } from '../ui/edit-exercise.modal';
           @if (subtitle()) { <p class="hero-sub">{{ subtitle() }}</p> }
         </header>
 
-        <nav class="week" aria-label="Días de la semana">
+        <nav class="week" aria-label="{{ 'common.weekdays' | translate }}">
           @for (w of week; track w.n) {
             <button type="button" class="wd" [class.sel]="selected() === w.n" [class.today]="today === w.n" [class.has]="trains().has(w.n)"
               [attr.aria-pressed]="selected() === w.n"
-              [attr.aria-label]="w.name + (trains().has(w.n) ? ', hay entrenamiento' : ', descanso')" (click)="selected.set(w.n)">
+              [attr.aria-label]="weekdayName(w.n) + (trains().has(w.n) ? ', ' + ('today.hasWorkout' | translate) : ', ' + ('today.restDay' | translate))" (click)="selected.set(w.n)">
               <span class="l">{{ w.short }}</span><span class="dot"></span>
             </button>
           }
@@ -34,40 +36,40 @@ import { EditExerciseModal, EditResult } from '../ui/edit-exercise.modal';
         @if (!plan()) {
           <div class="empty">
             @if (plans.loading() && plans.plans().length === 0) {
-              <strong>Cargando tu rutina…</strong>Un momento.
+              <strong>{{ 'today.loading' | translate }}</strong>{{ 'today.loadingMoment' | translate }}
             } @else if (plans.error(); as err) {
-              <strong>No hemos podido cargar tu rutina</strong>{{ err }}
-              <div style="margin-top:18px"><button type="button" class="btn" (click)="plans.load(true)">Reintentar</button></div>
+              <strong>{{ 'today.loadError' | translate }}</strong>{{ err }}
+              <div style="margin-top:18px"><button type="button" class="btn" (click)="plans.load(true)">{{ 'today.retry' | translate }}</button></div>
             } @else if (plans.plans().length === 0) {
-              <strong>Aún no tienes ninguna rutina</strong>
-              Créala a mano o pídesela a Hercules, y aquí verás qué te toca cada día.
-              <div style="margin-top:18px"><button type="button" class="btn btn-primary" (click)="go('/rutinas/nueva')">Crear rutina</button></div>
+              <strong>{{ 'today.noPlans' | translate }}</strong>
+              {{ 'today.noPlansAction' | translate }}
+              <div style="margin-top:18px"><button type="button" class="btn btn-primary" (click)="go('/rutinas/nueva')">{{ 'today.createPlan' | translate }}</button></div>
             } @else {
-              <strong>No hay ninguna rutina activa</strong>
-              Activa una de tus rutinas para ver aquí qué te toca cada día.
-              <div style="margin-top:18px"><button type="button" class="btn btn-primary" (click)="go('/tabs/rutinas')">Ver mis rutinas</button></div>
+              <strong>{{ 'today.noActivePlan' | translate }}</strong>
+              {{ 'today.noActivePlanAction' | translate }}
+              <div style="margin-top:18px"><button type="button" class="btn btn-primary" (click)="go('/tabs/rutinas')">{{ 'today.viewPlans' | translate }}</button></div>
             }
           </div>
         } @else if (day(); as d) {
           <section class="section-gap">
             <h2 class="display-l">{{ d.name }}</h2>
-            <p class="muted" style="margin:6px 0 0">{{ d.exercises.length }} {{ d.exercises.length === 1 ? 'ejercicio' : 'ejercicios' }}. Toca el disco para ajustar el peso.</p>
+            <p class="muted" style="margin:6px 0 0">{{ d.exercises.length }} {{ d.exercises.length === 1 ? ('today.exercisesCount_one' | translate) : ('today.exercisesCount_other' | translate) }}. {{ 'today.tapToAdjust' | translate }}</p>
             <div class="ex-list">
               @for (pe of d.exercises; track pe.id) {
                 <app-exercise-row [pe]="pe" (open)="go('/ejercicio/' + pe.exerciseId)" (edit)="edit(d.id, pe)" />
               } @empty {
-                <p class="empty">Este día aún no tiene ejercicios. Añádelos desde Rutinas.</p>
+                <p class="empty">{{ 'today.emptyDay' | translate }}</p>
               }
             </div>
           </section>
         } @else {
           <div class="empty">
-            <strong>Día de descanso</strong>
+            <strong>{{ 'today.restDayTitle' | translate }}</strong>
             @if (next(); as n) {
-              Tu próximo entrenamiento es el {{ weekdayName(n.dow).toLowerCase() }}: {{ n.name }}.
-              <div style="margin-top:18px"><button type="button" class="btn" (click)="selected.set(n.dow)">Ver el {{ weekdayName(n.dow).toLowerCase() }}</button></div>
+              {{ 'today.nextWorkout' | translate | replace:{day: weekdayName(n.dow).toLowerCase(), name: n.name} }}
+              <div style="margin-top:18px"><button type="button" class="btn" (click)="selected.set(n.dow)">{{ 'today.viewDay' | translate | replace:{day: weekdayName(n.dow).toLowerCase()} }}</button></div>
             } @else {
-              Esta rutina no tiene días de entrenamiento todavía.
+              {{ 'today.noTrainingDays' | translate }}
             }
           </div>
         }
@@ -80,6 +82,7 @@ export class TodayPage {
   private readonly modal = inject(ModalController);
   private readonly toastCtrl = inject(ToastController);
   private readonly nav = inject(NavController);
+  private readonly translate = inject(TranslateService);
 
   week = WEEKDAYS;
   today = todayDow();
@@ -99,13 +102,14 @@ export class TodayPage {
     }
     return null;
   });
-  heading = computed(() => (this.selected() === this.today ? 'Hoy' : weekdayName(this.selected())));
+  heading = computed(() => (this.selected() === this.today ? this.translate.instant('today.today') : this.weekdayName(this.selected())));
   subtitle = computed(() => {
     if (this.selected() === this.today) {
-      const t = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+      const lang = this.translate.currentLang();
+      const t = new Intl.DateTimeFormat(lang === 'es' ? 'es-ES' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
       return t.charAt(0).toUpperCase() + t.slice(1);
     }
-    return this.plan() ? `Rutina «${this.plan()!.name}»` : '';
+    return this.plan() ? `${this.translate.instant('today.routinePrefix')} «${this.plan()!.name}»` : '';
   });
 
   go(path: string) {
@@ -125,7 +129,7 @@ export class TodayPage {
     if (role !== 'save' || !data) return;
     try {
       await this.plans.updateExercise(plan.id, dayId, { ...pe, ...data });
-      await showToast(this.toastCtrl, 'Cambios guardados');
+      await showToast(this.toastCtrl, this.translate.instant('today.toastSaved'));
     } catch (e) {
       await showToast(this.toastCtrl, (e as Error).message);
     }

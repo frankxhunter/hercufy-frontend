@@ -5,6 +5,7 @@ import { catchError, from, map, of, startWith, switchMap } from 'rxjs';
 import { ExerciseService } from '../core/services/exercise.service';
 import { EQUIPMENT_ES, LEVEL_ES, MUSCLE_ES } from '../core/labels';
 import { Exercise } from '../core/models';
+import { TranslateService, TranslatePipe } from '@ngx-translate/core';
 
 type Detail =
   | { kind: 'loading' }
@@ -14,7 +15,7 @@ type Detail =
 @Component({
   selector: 'app-exercise-detail',
   standalone: true,
-  imports: [IonHeader, IonToolbar, IonButtons, IonBackButton, IonContent],
+  imports: [IonHeader, IonToolbar, IonButtons, IonBackButton, IonContent, TranslatePipe],
   template: `
     <ion-header class="ion-no-border">
       <ion-toolbar><ion-buttons slot="start"><ion-back-button defaultHref="/tabs/ejercicios" text="" /></ion-buttons></ion-toolbar>
@@ -22,10 +23,10 @@ type Detail =
     <ion-content>
       @switch (state().kind) {
         @case ('loading') {
-          <div class="wrap"><p class="empty">Cargando ejercicio...</p></div>
+          <div class="wrap"><p class="empty">{{ 'exerciseDetail.loading' | translate }}</p></div>
         }
         @case ('missing') {
-          <div class="wrap"><p class="empty"><strong>No encuentro este ejercicio</strong>Vuelve al catálogo para buscarlo.</p></div>
+          <div class="wrap"><p class="empty"><strong>{{ 'exerciseDetail.notFoundTitle' | translate }}</strong>{{ 'exerciseDetail.notFoundAction' | translate }}</p></div>
         }
         @case ('ready') {
           @if (state().kind === 'ready') {
@@ -41,18 +42,18 @@ type Detail =
               }
 
               <dl class="facts">
-                <div><dt>Músculo principal</dt><dd>{{ primary() }}</dd></div>
-                @if (secondary()) { <div><dt>Secundarios</dt><dd>{{ secondary() }}</dd></div> }
-                <div><dt>Material</dt><dd>{{ equipment() }}</dd></div>
-                <div><dt>Nivel</dt><dd>{{ level() }}</dd></div>
+                <div><dt>{{ 'exerciseDetail.musclePrimary' | translate }}</dt><dd>{{ primary() }}</dd></div>
+                @if (secondary()) { <div><dt>{{ 'exerciseDetail.muscleSecondary' | translate }}</dt><dd>{{ secondary() }}</dd></div> }
+                <div><dt>{{ 'exerciseDetail.equipment' | translate }}</dt><dd>{{ equipment() }}</dd></div>
+                <div><dt>{{ 'exerciseDetail.level' | translate }}</dt><dd>{{ level() }}</dd></div>
               </dl>
 
-              <h2 class="display-m" style="margin-top:28px">Cómo se hace</h2>
+              <h2 class="display-m" style="margin-top:28px">{{ 'exerciseDetail.instructionsTitle' | translate }}</h2>
               <ol class="steps">
                 @for (s of instructions(); track $index) { <li>{{ s }}</li> }
               </ol>
               @if (!translated()) {
-                <p class="note">Este ejercicio todavía no tiene traducción al español; las instrucciones están en inglés.</p>
+                <p class="note">{{ 'exerciseDetail.notTranslated' | translate }}</p>
               }
             </div>
           }
@@ -63,6 +64,7 @@ type Detail =
 })
 export class ExerciseDetailPage {
   private readonly catalog = inject(ExerciseService);
+  private readonly translate = inject(TranslateService);
   id = input.required<string>();
 
   readonly state = toSignal(
@@ -96,14 +98,14 @@ export class ExerciseDetailPage {
   instructions = computed(() => this.ex()?.instructions ?? []);
   primary = computed(() => {
     const m = this.ex()?.primaryMuscles[0];
-    return m ? (MUSCLE_ES[m] ?? m) : '—';
+    return m ? (MUSCLE_ES[m] ?? m) : this.translate.instant('exerciseDetail.noImage');
   });
   secondary = computed(
     () => this.ex()?.secondaryMuscles.map((m) => MUSCLE_ES[m] ?? m).join(', ') ?? '',
   );
   equipment = computed(() => {
     const e = this.ex()?.equipment;
-    return e ? (EQUIPMENT_ES[e] ?? e) : 'Sin material';
+    return e ? (EQUIPMENT_ES[e] ?? e) : this.translate.instant('exerciseDetail.noImage');
   });
   level = computed(() => {
     const l = this.ex()?.level;

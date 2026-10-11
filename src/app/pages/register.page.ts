@@ -5,34 +5,35 @@ import { IonContent, ToastController } from '@ionic/angular';
 import { AuthService } from '../core/services/auth.service';
 import { LogoComponent } from '../ui/logo.component';
 import { showToast } from '../core/util';
+import { TranslateService, TranslatePipe } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [IonContent, FormsModule, RouterLink, LogoComponent],
+  imports: [IonContent, FormsModule, RouterLink, LogoComponent, TranslatePipe],
   template: `
     <ion-content>
       <div class="auth">
         <div class="brand"><app-logo [size]="42" /><span class="wordmark">Hercufy</span></div>
         @if (!done()) {
-          <h1 class="auth-title">Crea tu cuenta.</h1>
-          <p class="auth-sub">Tus rutinas te esperan en cualquier dispositivo.</p>
+          <h1 class="auth-title">{{ 'auth.register.title' | translate }}</h1>
+          <p class="auth-sub">{{ 'auth.register.subtitle' | translate }}</p>
           <form (ngSubmit)="submit()">
-            <label class="field-label" for="name">Nombre</label>
+            <label class="field-label" for="name">{{ 'auth.register.nameLabel' | translate }}</label>
             <input id="name" name="name" class="field" type="text" autocomplete="given-name" [(ngModel)]="name" />
-            <label class="field-label" for="email">Correo electrónico</label>
+            <label class="field-label" for="email">{{ 'auth.register.emailLabel' | translate }}</label>
             <input id="email" name="email" class="field" type="email" autocomplete="email" [(ngModel)]="email" />
-            <label class="field-label" for="password">Contraseña</label>
+            <label class="field-label" for="password">{{ 'auth.register.passwordLabel' | translate }}</label>
             <input id="password" name="password" class="field" type="password" autocomplete="new-password" [(ngModel)]="password" />
-            <p class="field-label">Entre 8 y 20 caracteres, con mayúscula, minúscula, número y símbolo.</p>
+            <p class="field-label">{{ 'auth.register.passwordHint' | translate }}</p>
             @if (error()) { <p class="form-error" role="alert">{{ error() }}</p> }
-            <button class="btn btn-primary btn-block" type="submit" [disabled]="busy()">{{ busy() ? 'Creando…' : 'Crear cuenta' }}</button>
+            <button class="btn btn-primary btn-block" type="submit" [disabled]="busy()">{{ busy() ? ('auth.register.submitting' | translate) : ('auth.register.submit' | translate) }}</button>
           </form>
-          <p class="switch">¿Ya tienes cuenta? <a routerLink="/login">Entrar</a></p>
+          <p class="switch">{{ 'auth.register.switchText' | translate }} <a routerLink="/login">{{ 'auth.register.loginLink' | translate }}</a></p>
         } @else {
-          <h1 class="auth-title">Revisa tu correo.</h1>
+          <h1 class="auth-title">{{ 'auth.register.checkEmailTitle' | translate }}</h1>
           <p class="auth-sub">{{ message() }}</p>
-          <a class="btn btn-primary btn-block" routerLink="/login">Ir a entrar</a>
+          <a class="btn btn-primary btn-block" routerLink="/login">{{ 'auth.register.goToLogin' | translate }}</a>
         }
       </div>
     </ion-content>
@@ -41,6 +42,7 @@ import { showToast } from '../core/util';
 export class RegisterPage {
   private readonly auth = inject(AuthService);
   private readonly toastCtrl = inject(ToastController);
+  private readonly translate = inject(TranslateService);
 
   name = '';
   email = '';
@@ -54,10 +56,9 @@ export class RegisterPage {
     this.error.set('');
     this.busy.set(true);
     try {
-      // El registro no abre sesión: el backend exige confirmar el correo antes.
       this.message.set(await this.auth.register(this.name, this.email.trim(), this.password));
       this.done.set(true);
-      await showToast(this.toastCtrl, 'Cuenta creada');
+      await showToast(this.toastCtrl, this.translate.instant('auth.register.toastSuccess'));
     } catch (e) {
       this.error.set((e as Error).message);
     } finally {

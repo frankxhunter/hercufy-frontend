@@ -8,6 +8,7 @@ import { showToast } from '../core/util';
 import { uid } from '../core/labels';
 import { DraftPreviewComponent } from '../ui/draft-preview.component';
 import { ExercisePickerModal } from '../ui/exercise-picker.modal';
+import { TranslateService, TranslatePipe } from '@ngx-translate/core';
 
 const SAMPLE = `Lunes: Pecho y tríceps
 Press banca 4x8 60kg
@@ -22,12 +23,12 @@ Elevación de gemelos en el sitio 4x15`;
 @Component({
   selector: 'app-hercules',
   standalone: true,
-  imports: [FormsModule, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonContent, IonFooter, IonIcon, DraftPreviewComponent],
+  imports: [FormsModule, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonContent, IonFooter, IonIcon, DraftPreviewComponent, TranslatePipe],
   template: `
     <ion-header class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start"><ion-back-button defaultHref="/rutinas/nueva" text="" /></ion-buttons>
-        <ion-title>Hercules</ion-title>
+        <ion-title>{{ 'hercules.title' | translate }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -36,7 +37,7 @@ Elevación de gemelos en el sitio 4x15`;
         <div class="msgs" aria-live="polite">
           <div style="display:flex;gap:10px;align-items:flex-start">
             <span class="avatar" aria-hidden="true">H</span>
-            <div class="msg bot" style="max-width:100%">Soy Hercules. Cuéntame qué quieres entrenar: cuántos días a la semana, qué músculos, tu objetivo. También puedes pegar una rutina que ya tengas, con sus pesos y repeticiones, y la convierto.</div>
+            <div class="msg bot" style="max-width:100%">{{ 'hercules.welcome' | translate }}</div>
           </div>
 
           @if (messages().length === 0) {
@@ -44,7 +45,7 @@ Elevación de gemelos en el sitio 4x15`;
               @for (s of suggestions; track s) {
                 <button type="button" class="chip" (click)="use(s)">{{ s }}</button>
               }
-              <button type="button" class="chip" (click)="text.set(sample)">Pegar una rutina de ejemplo</button>
+              <button type="button" class="chip" (click)="text.set(sample)">{{ 'hercules.pasteSample' | translate }}</button>
             </div>
           }
 
@@ -52,7 +53,7 @@ Elevación de gemelos en el sitio 4x15`;
             <div [class]="'msg ' + (m.role === 'user' ? 'user' : 'bot')" [id]="'m-' + m.id">{{ m.text }}</div>
           }
           @if (busy()) {
-            <div class="msg bot" aria-label="Hercules está pensando"><span class="typing"><i></i><i></i><i></i></span></div>
+            <div class="msg bot" [aria-label]="'hercules.typing' | translate"><span class="typing"><i></i><i></i><i></i></span></div>
           }
         </div>
 
@@ -65,9 +66,9 @@ Elevación de gemelos en el sitio 4x15`;
 
     <ion-footer>
       <div class="composer">
-        <textarea #box class="field" rows="2" [placeholder]="draft() ? 'Pide un cambio: «cámbiame el press banca por…»' : 'Describe tu rutina ideal o pega la que ya tienes'"
-          aria-label="Mensaje para Hercules" [ngModel]="text()" (ngModelChange)="text.set($event)" (keydown.enter)="onEnter($event)"></textarea>
-        <button type="button" class="send" (click)="send()" [disabled]="busy() || !text().trim()" aria-label="Enviar"><ion-icon name="send" /></button>
+        <textarea #box class="field" rows="2" [placeholder]="draft() ? ('hercules.placeholderWithDraft' | translate) : ('hercules.placeholder' | translate)"
+          [aria-label]="'hercules.sendAria' | translate" [ngModel]="text()" (ngModelChange)="text.set($event)" (keydown.enter)="onEnter($event)"></textarea>
+        <button type="button" class="send" (click)="send()" [disabled]="busy() || !text().trim()" [aria-label]="'hercules.sendAria' | translate"><ion-icon name="send" /></button>
       </div>
     </ion-footer>
   `,
@@ -78,6 +79,7 @@ export class HerculesPage {
   private readonly modal = inject(ModalController);
   private readonly nav = inject(NavController);
   private readonly toastCtrl = inject(ToastController);
+  private readonly translate = inject(TranslateService);
   @ViewChild(IonContent) content?: IonContent;
 
   messages = signal<ChatMessage[]>([]);
@@ -114,11 +116,10 @@ export class HerculesPage {
       const res = current ? await this.assistant.refine(current, t) : await this.assistant.createDraft(t);
       this.draft.set(res.draft);
       this.busy.set(false);
-      // Se muestra el inicio de la respuesta, con la propuesta justo debajo.
       this.scrollTo(this.push('assistant', res.reply));
     } catch {
       this.busy.set(false);
-      this.scrollTo(this.push('assistant', 'No he podido responder ahora mismo. Inténtalo de nuevo en un momento.'));
+      this.scrollTo(this.push('assistant', this.translate.instant('hercules.errorReply')));
     }
   }
 
@@ -161,19 +162,17 @@ export class HerculesPage {
     if (!d) return;
     const days = d.days.filter((x) => x.exercises.length > 0);
     if (days.length === 0) {
-      await showToast(this.toastCtrl, 'La rutina no tiene ejercicios todavía');
+      await showToast(this.toastCtrl, this.translate.instant('hercules.toastNoExercises'));
       return;
     }
     let plan;
     try {
-      // El backend crea la rutina y luego los ejercicios de uno en uno: si algo falla, se avisa
-      // y el borrador sigue en pantalla para reintentarlo.
-      plan = await this.plans.addPlan({ name: d.name.trim() || 'Mi rutina', scheduleType: 'WEEKDAY', days });
+      plan = await this.plans.addPlan({ name: d.name.trim() || this.translate.instant('hercules.defaultRoutineName'), scheduleType: 'WEEKDAY', days });
     } catch (e) {
       await showToast(this.toastCtrl, (e as Error).message);
       return;
     }
-    await showToast(this.toastCtrl, 'Rutina creada');
+    await showToast(this.toastCtrl, this.translate.instant('hercules.toastCreated'));
     await this.nav.navigateRoot('/rutinas/' + plan.id);
   }
 
