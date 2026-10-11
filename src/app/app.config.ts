@@ -9,7 +9,7 @@ import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideIonicAngular } from '@ionic/angular';
 import { provideTranslateService } from '@ngx-translate/core';
-import { TRANSLATE_HTTP_LOADER_CONFIG } from '@ngx-translate/http-loader';
+import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 import { routes } from './app.routes';
 import { HttpPlanRepository, PlanRepository } from './core/services/plan.repository';
 import { HttpExerciseRepository, ExerciseRepository } from './core/services/exercise.repository';
@@ -17,6 +17,7 @@ import { AssistantPort, LocalAssistant } from './core/services/assistant.service
 import { PlanService } from './core/services/plan.service';
 import { ExerciseService } from './core/services/exercise.service';
 import { AuthService } from './core/services/auth.service';
+import { LanguageService } from './core/services/language.service';
 import { authInterceptor } from './core/services/auth.interceptor';
 import { provideServiceWorker } from '@angular/service-worker';
 import { Capacitor } from '@capacitor/core';
@@ -28,10 +29,10 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withComponentInputBinding()),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideIonicAngular({ mode: 'md' }),
-    { provide: TRANSLATE_HTTP_LOADER_CONFIG, useValue: { resources: [{ prefix: './assets/i18n/', suffix: '.json' }] } },
     provideTranslateService({
       lang: 'es',
       fallbackLang: 'en',
+      loader: provideTranslateHttpLoader({ prefix: './assets/i18n/', suffix: '.json' }),
     }),
     // Fuente de datos real: el backend Spring Boot es el único que decide qué es una rutina.
     { provide: PlanRepository, useClass: HttpPlanRepository },
@@ -44,7 +45,9 @@ export const appConfig: ApplicationConfig = {
       const auth = inject(AuthService);
       const plans = inject(PlanService);
       const catalog = inject(ExerciseService);
+      const lang = inject(LanguageService);
       return (async () => {
+        await lang.init();
         await auth.restore();
         if (auth.user()) {
           catalog.ensureIndex();

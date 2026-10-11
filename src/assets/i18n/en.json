@@ -51,6 +51,7 @@
       "emailNotVerified": "Your email is not confirmed yet.",
       "dataSynced": "Your routines and catalog are stored on the server: you'll see them the same on any device.",
       "renameTitle": "Your name",
+      "renameAria": "Rename",
       "renamePlaceholder": "What should we call you",
       "cancel": "Cancel",
       "save": "Save",
@@ -90,7 +91,8 @@
     "hasWorkout": "has workout",
     "restDay": "rest",
     "today": "Today",
-    "routinePrefix": "Routine"
+    "routinePrefix": "Routine",
+    "weekdaysAria": "Days of the week"
   },
   "plans": {
     "title": "Routines",
@@ -172,6 +174,7 @@
   },
   "exerciseBrowser": {
     "searchPlaceholder": "Search by name or equipment",
+    "searchAria": "Search exercises",
     "allMuscles": "All",
     "count_one": "exercise",
     "count_other": "exercises",

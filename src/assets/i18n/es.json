@@ -51,6 +51,7 @@
       "emailNotVerified": "Tu correo aún no está confirmado.",
       "dataSynced": "Tus rutinas y tu catálogo se guardan en el servidor: los verás igual desde cualquier dispositivo.",
       "renameTitle": "Tu nombre",
+      "renameAria": "Cambiar nombre",
       "renamePlaceholder": "Cómo te llamamos",
       "cancel": "Cancelar",
       "save": "Guardar",
@@ -90,7 +91,8 @@
     "hasWorkout": "hay entrenamiento",
     "restDay": "descanso",
     "today": "Hoy",
-    "routinePrefix": "Rutina"
+    "routinePrefix": "Rutina",
+    "weekdaysAria": "Días de la semana"
   },
   "plans": {
     "title": "Rutinas",
@@ -172,6 +174,7 @@
   },
   "exerciseBrowser": {
     "searchPlaceholder": "Buscar por nombre o material",
+    "searchAria": "Buscar ejercicios",
     "allMuscles": "Todos",
     "count_one": "ejercicio",
     "count_other": "ejercicios",

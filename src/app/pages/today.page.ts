@@ -23,7 +23,7 @@ import { ReplacePipe } from '../core/pipes/replace.pipe';
           @if (subtitle()) { <p class="hero-sub">{{ subtitle() }}</p> }
         </header>
 
-        <nav class="week" aria-label="{{ 'common.weekdays' | translate }}">
+        <nav class="week" aria-label="{{ 'today.weekdaysAria' | translate }}">
           @for (w of week; track w.n) {
             <button type="button" class="wd" [class.sel]="selected() === w.n" [class.today]="today === w.n" [class.has]="trains().has(w.n)"
               [attr.aria-pressed]="selected() === w.n"
