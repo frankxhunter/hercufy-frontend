@@ -58,7 +58,7 @@ Elevación de gemelos en el sitio 4x15`;
         </div>
 
         @if (draft(); as d) {
-          <app-draft-preview [draft]="d" (renamed)="rename($event)" (accept)="accept()" (discard)="discard()"
+          <app-draft-preview [draft]="d" [busy]="saving()" (renamed)="rename($event)" (accept)="accept()" (discard)="discard()"
             (resolve)="resolve($event)" (skip)="skip($event)" (openExercise)="open($event)" />
         }
       </div>
@@ -86,6 +86,7 @@ export class HerculesPage {
   draft = signal<PlanDraft | null>(null);
   text = signal('');
   busy = signal(false);
+  saving = signal(false);
   sample = SAMPLE;
   suggestions = [
     'Rutina de 4 días para ganar masa muscular',
@@ -159,21 +160,26 @@ export class HerculesPage {
 
   async accept() {
     const d = this.draft();
-    if (!d) return;
+    if (!d || this.saving()) return;
     const days = d.days.filter((x) => x.exercises.length > 0);
     if (days.length === 0) {
       await showToast(this.toastCtrl, this.translate.instant('hercules.toastNoExercises'));
       return;
     }
-    let plan;
+    this.saving.set(true);
     try {
-      plan = await this.plans.addPlan({ name: d.name.trim() || this.translate.instant('hercules.defaultRoutineName'), scheduleType: 'WEEKDAY', days });
+      const plan = await this.plans.addPlan({
+        name: d.name.trim() || this.translate.instant('hercules.defaultRoutineName'),
+        scheduleType: 'WEEKDAY',
+        days,
+      });
+      await showToast(this.toastCtrl, this.translate.instant('hercules.toastCreated'));
+      await this.nav.navigateRoot('/rutinas/' + plan.id);
     } catch (e) {
       await showToast(this.toastCtrl, (e as Error).message);
-      return;
+    } finally {
+      this.saving.set(false);
     }
-    await showToast(this.toastCtrl, this.translate.instant('hercules.toastCreated'));
-    await this.nav.navigateRoot('/rutinas/' + plan.id);
   }
 
   private push(role: ChatMessage['role'], text: string): string {

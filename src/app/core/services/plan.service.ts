@@ -107,17 +107,22 @@ export class PlanService {
       wanted.map((d) => ({ name: d.name.trim(), dayOfWeek: d.dayOfWeek as number })),
     );
 
-    for (let i = 0; i < wanted.length; i++) {
-      const day = current.days[i];
-      for (const pe of wanted[i].exercises) {
-        current = await this.repo.addExercise(current.id, day.id, {
-          exerciseId: pe.exerciseId,
-          sets: pe.sets,
-          reps: pe.reps,
-          weightKg: pe.weightKg,
-        });
+    try {
+      for (let i = 0; i < wanted.length; i++) {
+        const day = current.days[i];
+        for (const pe of wanted[i].exercises) {
+          current = await this.repo.addExercise(current.id, day.id, {
+            exerciseId: pe.exerciseId,
+            sets: pe.sets,
+            reps: pe.reps,
+            weightKg: pe.weightKg,
+          });
+        }
+        this.adopt(current);
       }
-      this.adopt(current);
+    } catch (e) {
+      await this.repo.remove(current.id).catch(() => undefined);
+      throw e;
     }
     return current;
   }

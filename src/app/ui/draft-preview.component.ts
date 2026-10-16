@@ -31,8 +31,8 @@ import { ExerciseRowComponent } from './exercise-row.component';
         </div>
       }
       <div class="draft-actions">
-        <button type="button" class="btn btn-primary" [disabled]="pending() > 0" (click)="accept.emit()">
-          {{ pending() > 0 ? 'Resuelve los pendientes para aceptar' : 'Aceptar rutina' }}
+        <button type="button" class="btn btn-primary" [disabled]="pending() > 0 || busy()" (click)="accept.emit()">
+          {{ busy() ? 'Creando rutina…' : pending() > 0 ? 'Resuelve los pendientes para aceptar' : 'Aceptar rutina' }}
         </button>
         <button type="button" class="btn btn-ghost" (click)="discard.emit()">Descartar</button>
       </div>
@@ -41,6 +41,7 @@ import { ExerciseRowComponent } from './exercise-row.component';
 })
 export class DraftPreviewComponent {
   draft = input.required<PlanDraft>();
+  busy = input(false);
   renamed = output<string>();
   accept = output<void>();
   discard = output<void>();
